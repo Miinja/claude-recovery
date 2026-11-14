@@ -161,8 +161,9 @@ partition, stores the settings there, then erases the block.
 - [x] Settings block installer → key — tested (written on Windows, read back on Linux)
 - [x] Windows installer — builds; copy, settings block and read-back tested on a file
 - [ ] Windows installer — writing to a real USB key has **never been tried**
-- [ ] Image build — scripts and workflow written, **never run**
-- [ ] First boot (persistence creation) — **never tried** on a key
+- [x] Image build — both editions build in a `debian:trixie` container, and the release workflow has run on GitHub
+- [x] First boot — tested in a virtual machine (QEMU): BIOS and UEFI boot, plain and encrypted persistence, installer settings applied (business edition), second boot with persistence active
+- [ ] First boot on a real USB key — **never tried**
 - [ ] Windows mode — to be validated on a test PC
 - [ ] Log server and Forgejo — files ready in `server/`, to be deployed
 

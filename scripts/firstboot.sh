@@ -50,13 +50,16 @@ if [ -n "$BLOB_OFF" ]; then
       cr_set_lang "$RECOVERY_LANG"
     fi
     CR_LANG="$(cr_lang)"
-    t "Réglages de l'installeur appliqués." "Installer settings applied."
+    [ "${1:-}" = "--settings-only" ] || t "Réglages de l'installeur appliqués." "Installer settings applied."
   else
     t "Réglages de l'installeur illisibles : ils sont ignorés." \
       "Installer settings are unreadable: they are ignored."
   fi
   rm -f "$CONF"
 fi
+
+# Appel préalable du lanceur : il ne voulait que les réglages (dont la langue).
+[ "${1:-}" = "--settings-only" ] && exit 0
 
 # --- Une persistance existe-t-elle déjà sur la clé ? ---------------------------
 if lsblk -lno LABEL,FSTYPE "$DISK" | grep -Eq '(^persistence |crypto_LUKS)'; then
@@ -82,49 +85,80 @@ if [ "$(lsblk -dno PTTYPE "$DISK")" != "dos" ]; then
   exit 0
 fi
 
-# Début de l'espace libre : après l'image et après la zone du bloc de réglages.
 SECTOR=512
-END_PARTS="$(sfdisk -l -o End "$DISK" | awk '$1 ~ /^[0-9]+$/ && $1 > m { m = $1 } END { print m + 0 }')"
-END_IMG=$(( ISO_BYTES / SECTOR ))
-[ "$END_PARTS" -gt "$END_IMG" ] && END_IMG="$END_PARTS"
-START_MIB=$(( END_IMG * SECTOR / 1048576 + 1 ))
-[ -n "$BLOB_OFF" ] && [ $(( BLOB_OFF / 1048576 + 1 )) -gt "$START_MIB" ] && START_MIB=$(( BLOB_OFF / 1048576 + 1 ))
-START_MIB=$(( START_MIB + 1 ))
-TOTAL_MIB=$(( $(blockdev --getsize64 "$DISK") / 1048576 ))
-FREE_MIB=$(( TOTAL_MIB - START_MIB - 1 ))
+ISO_END=$(( (ISO_BYTES + SECTOR - 1) / SECTOR ))
 
-if [ "$FREE_MIB" -lt 2048 ]; then
-  t "Moins de 2 Go libres sur la clé : persistance impossible." \
-    "Less than 2 GB free on the key: persistence is not possible."
-  exit 0
+# Secteur de début de la première partition du type donné située après l'image.
+part_start() {
+  sfdisk -d "$DISK" 2>/dev/null \
+    | sed -n 's/.*start= *\([0-9]*\), *size= *[0-9]*, *type=\([0-9a-fA-F]*\).*/\1 \2/p' \
+    | awk -v t="$1" -v min="$ISO_END" '$2 == t && $1 >= min { print $1; exit }'
+}
+# Périphérique de la partition de la clé qui commence au secteur donné.
+dev_at() {
+  local f
+  for f in /sys/block/"$PK"/*/start; do
+    [ -e "$f" ] || continue
+    if [ "$(cat "$f")" = "$1" ]; then echo "/dev/$(basename "$(dirname "$f")")"; return 0; fi
+  done
+  return 1
+}
+
+P_START="$(part_start 83)"
+W_START="$(part_start 7)"
+if [ -n "$P_START" ] && [ -n "$W_START" ]; then
+  # Une tentative précédente a créé les partitions sans aller au bout : on les reprend.
+  t "Partitions déjà créées lors d'un essai précédent : reprise." \
+    "Partitions already created by an earlier attempt: resuming."
+else
+  # Début de l'espace libre : après l'image et après la zone du bloc de réglages.
+  END_PARTS="$(sfdisk -l -o End "$DISK" | awk '$1 ~ /^[0-9]+$/ && $1 > m { m = $1 } END { print m + 0 }')"
+  END_IMG="$ISO_END"
+  [ "$END_PARTS" -gt "$END_IMG" ] && END_IMG="$END_PARTS"
+  START_MIB=$(( END_IMG * SECTOR / 1048576 + 1 ))
+  [ -n "$BLOB_OFF" ] && [ $(( BLOB_OFF / 1048576 + 1 )) -gt "$START_MIB" ] && START_MIB=$(( BLOB_OFF / 1048576 + 1 ))
+  START_MIB=$(( START_MIB + 1 ))
+  TOTAL_MIB=$(( $(blockdev --getsize64 "$DISK") / 1048576 ))
+  FREE_MIB=$(( TOTAL_MIB - START_MIB - 1 ))
+
+  if [ "$FREE_MIB" -lt 2048 ]; then
+    t "Moins de 2 Go libres sur la clé : persistance impossible." \
+      "Less than 2 GB free on the key: persistence is not possible."
+    exit 0
+  fi
+
+  # Persistance plafonnée ; le reste va à la partition lisible sous Windows (mode Windows,
+  # présent dans les deux éditions).
+  [ "$PERSIST_SIZE_MIB" -gt $(( FREE_MIB / 2 )) ] && PERSIST_SIZE_MIB=$(( FREE_MIB / 2 ))
+  WIN_MIB=$(( FREE_MIB - PERSIST_SIZE_MIB ))
+  P_START=$(( START_MIB * 2048 ))
+  W_START=$(( (START_MIB + PERSIST_SIZE_MIB) * 2048 ))
+  {
+    echo "start=$P_START, size=$(( PERSIST_SIZE_MIB * 2048 )), type=83"
+    echo "start=$W_START, size=$(( WIN_MIB * 2048 )), type=7"
+  } | sfdisk --append --force --no-reread "$DISK" >/dev/null 2>&1
+  if [ "$(part_start 83)" != "$P_START" ] || [ "$(part_start 7)" != "$W_START" ]; then
+    t "Création des partitions impossible sur $DISK." "Could not create the partitions on $DISK."
+    exit 0
+  fi
 fi
-
-# Persistance plafonnée ; le reste va à la partition lisible sous Windows (mode Windows,
-# présent dans les deux éditions).
-[ "$PERSIST_SIZE_MIB" -gt $(( FREE_MIB / 2 )) ] && PERSIST_SIZE_MIB=$(( FREE_MIB / 2 ))
-WIN_MIB=$(( FREE_MIB - PERSIST_SIZE_MIB ))
 
 ask answer "Chiffrer la persistance par une phrase de passe (recommandé) ? [O/n]" \
            "Encrypt the persistence with a passphrase (recommended)? [Y/n]"
 LUKS=1; is_no "$answer" && LUKS=0
 
-# Le bloc de réglages contient des jetons : on l'efface avant tout.
-[ -n "$BLOB_OFF" ] && cr_blob_erase "$DISK" "$BLOB_OFF"
-
-before="$(lsblk -lnpo NAME "$DISK" | wc -l)"
-{
-  echo "start=$(( START_MIB * 2048 )), size=$(( PERSIST_SIZE_MIB * 2048 )), type=83"
-  echo "start=$(( (START_MIB + PERSIST_SIZE_MIB) * 2048 )), size=$(( WIN_MIB * 2048 )), type=7"
-} | sfdisk --append --force --no-reread "$DISK" >/dev/null
-partx -u "$DISK" 2>/dev/null || partprobe "$DISK" 2>/dev/null || true
-sleep 2
-if [ "$(lsblk -lnpo NAME "$DISK" | wc -l)" -ne $(( before + 2 )) ]; then
+# La clé est en cours d'utilisation : le noyau ne relit pas toute la table, on lui
+# annonce les nouvelles partitions. (L'image hybride a deux partitions qui se
+# chevauchent : partx signale une erreur sur celles-là, sans conséquence.)
+partx -a "$DISK" >/dev/null 2>&1 || true
+udevadm settle 2>/dev/null || sleep 2
+PART="$(dev_at "$P_START" || true)"
+WINPART="$(dev_at "$W_START" || true)"
+if [ ! -b "$PART" ] || [ ! -b "$WINPART" ]; then
   t "Les nouvelles partitions ne sont pas visibles. Redémarrez la clé, puis relancez claude-recovery." \
     "The new partitions are not visible. Reboot the key, then run claude-recovery again."
   exit 0
 fi
-PART="$(lsblk -lnpo NAME "$DISK" | tail -n 2 | head -n 1)"
-WINPART="$(lsblk -lnpo NAME "$DISK" | tail -n 1)"
 
 TARGET="$PART"
 if [ "$LUKS" = 1 ]; then
@@ -151,6 +185,8 @@ if [ -f /etc/claude-recovery/config.env ]; then
 fi
 sync; umount "$MNT"; rmdir "$MNT"
 [ "$LUKS" = 1 ] && cryptsetup close cr-persistence
+# Le bloc de réglages contient des jetons : on l'efface dès qu'ils sont dans la persistance.
+[ -n "$BLOB_OFF" ] && cr_blob_erase "$DISK" "$BLOB_OFF"
 
 mkfs.exfat -L CR-WINDOWS "$WINPART" >/dev/null
 WMNT="$(mktemp -d)"

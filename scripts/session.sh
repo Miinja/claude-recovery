@@ -30,6 +30,13 @@ if [ "${1:-}" = "lang" ]; then
   exit 0
 fi
 
+# --- Réglages de l'installeur : lus avant toute question (ils fixent la langue) --
+if [ -z "${RECOVERY_LANG:-}" ] && ! mountpoint -q /etc/claude-recovery; then
+  sudo "$CR_REPO/scripts/firstboot.sh" --settings-only
+  # shellcheck disable=SC1091
+  [ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
+fi
+
 # --- Langue : demandée une fois si l'installeur ne l'a pas fixée ---------------
 if [ -z "${RECOVERY_LANG:-}" ]; then
   read -r -p "Langue / Language [fr/en] : " choice
@@ -48,6 +55,8 @@ mountpoint -q /etc/claude-recovery || sudo RECOVERY_LANG="$RECOVERY_LANG" "$CR_R
 
 # shellcheck disable=SC1091
 [ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
+CR_LANG="$(cr_lang)"
+export RECOVERY_LANG CR_LANG
 
 echo
 if [ "$EDITION" = "entreprise" ]; then

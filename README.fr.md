@@ -163,8 +163,9 @@ persistance, y range les réglages, puis efface le bloc.
 - [x] Bloc de réglages installeur → clé — testé (écriture Windows, relecture Linux)
 - [x] Installeur Windows — compile ; copie, bloc et relecture testés sur fichier
 - [ ] Installeur Windows — écriture sur une vraie clé USB **jamais essayée**
-- [ ] Build des images — scripts et workflow écrits, **jamais exécutés**
-- [ ] Premier démarrage (création de la persistance) — **jamais essayé** sur une clé
+- [x] Build des images — les deux éditions se construisent dans un conteneur `debian:trixie`, et le workflow de release a tourné sur GitHub
+- [x] Premier démarrage — testé en machine virtuelle (QEMU) : démarrage BIOS et UEFI, persistance en clair et chiffrée, réglages de l'installeur appliqués (édition entreprise), second démarrage avec persistance active
+- [ ] Premier démarrage sur une vraie clé USB — **jamais essayé**
 - [ ] Mode Windows — à valider sur un PC de test
 - [ ] Serveur de journaux et Forgejo — fichiers prêts dans `server/`, à déployer
 
