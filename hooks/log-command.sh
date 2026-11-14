@@ -52,8 +52,8 @@ fi
 payload="$(cat)"
 entry="$(jq -c \
   --arg ts "$(date -Iseconds)" \
-  --arg tech "${RECOVERY_TECH:-inconnu}" \
-  --arg job "${RECOVERY_JOB:-sans-job}" \
+  --arg tech "${RECOVERY_TECH:-unknown}" \
+  --arg job "${RECOVERY_JOB:-no-job}" \
   --arg key "${RECOVERY_KEY_ID:-}" \
   --arg host "$(hostname)" \
   '{ts: $ts, tech: $tech, job: $job, key: $key, host: $host,

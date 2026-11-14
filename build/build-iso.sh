@@ -62,8 +62,9 @@ echo "$VERSION" > config/includes.chroot/usr/share/claude-recovery/version
 
 # Config Claude de l'édition dans le profil (repris de /etc/skel au premier démarrage)
 mkdir -p config/includes.chroot/etc/skel/.claude
-cp "$ROOT/config/$EDITION/CLAUDE.md" "$ROOT/config/$EDITION/settings.json" \
-   config/includes.chroot/etc/skel/.claude/
+# (en anglais par défaut ; `claude-recovery` réinstalle la langue de la clé à chaque session)
+cp "$ROOT/config/$EDITION/CLAUDE.en.md" config/includes.chroot/etc/skel/.claude/CLAUDE.md
+cp "$ROOT/config/$EDITION/settings.json" config/includes.chroot/etc/skel/.claude/
 
 # Autorité de certification interne (Caddy `tls internal`), si fournie dans build/ca/
 if compgen -G "$HERE/ca/*.crt" >/dev/null; then

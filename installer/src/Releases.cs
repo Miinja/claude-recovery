@@ -57,8 +57,9 @@ namespace ClaudeRecovery
             {
                 var http = e.Response as HttpWebResponse;
                 if (http != null && http.StatusCode == HttpStatusCode.NotFound)
-                    throw new IOException("Aucune release publiée pour l'instant sur github.com/" + Repo + ".\nUtilisez « Fichier image local… » si vous avez déjà une image.");
-                throw new IOException("GitHub est injoignable : " + e.Message);
+                    throw new IOException(L.T("Aucune release publiée pour l'instant sur github.com/" + Repo + ".\nUtilisez « Fichier image local… » si vous avez déjà une image.",
+                                              "No release published yet on github.com/" + Repo + ".\nUse \"Local image file…\" if you already have an image."));
+                throw new IOException(L.T("GitHub est injoignable : ", "GitHub is unreachable: ") + e.Message);
             }
 
             var release = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(json);
@@ -73,7 +74,8 @@ namespace ClaudeRecovery
                 else if (assetName == name + ".sha256") image.ShaUrl = url;
             }
             if (image.IsoUrl == null || image.ShaUrl == null)
-                throw new IOException("La release " + image.Tag + " ne contient pas l'image « " + edition + " ».");
+                throw new IOException(L.T("La release " + image.Tag + " ne contient pas l'image « " + edition + " ».",
+                                          "Release " + image.Tag + " does not contain the \"" + edition + "\" image."));
             return image;
         }
 
@@ -88,10 +90,10 @@ namespace ClaudeRecovery
             string path = Path.Combine(dir, AssetName(edition));
 
             string expected = GetText(image.ShaUrl).Trim().Split(' ', '\t')[0].ToLowerInvariant();
-            if (expected.Length != 64) throw new IOException("Empreinte publiée illisible.");
+            if (expected.Length != 64) throw new IOException(L.T("Empreinte publiée illisible.", "The published checksum is unreadable."));
 
             if (File.Exists(path) && new FileInfo(path).Length == image.Size
-                && Imaging.Sha256File(path, delegate(long d, long t) { progress("Vérification de l'image déjà téléchargée", d, t); }) == expected)
+                && Imaging.Sha256File(path, delegate(long d, long t) { progress(L.T("Vérification de l'image déjà téléchargée", "Checking the image already downloaded"), d, t); }) == expected)
                 return path;
 
             string partial = path + ".part";
@@ -106,15 +108,16 @@ namespace ClaudeRecovery
                 {
                     output.Write(buf, 0, n);
                     done += n;
-                    progress("Téléchargement de l'image " + image.Tag, done, image.Size);
+                    progress(L.T("Téléchargement de l'image ", "Downloading image ") + image.Tag, done, image.Size);
                 }
             }
 
-            string actual = Imaging.Sha256File(partial, delegate(long d, long t) { progress("Vérification du téléchargement", d, t); });
+            string actual = Imaging.Sha256File(partial, delegate(long d, long t) { progress(L.T("Vérification du téléchargement", "Checking the download"), d, t); });
             if (actual != expected)
             {
                 File.Delete(partial);
-                throw new IOException("L'image téléchargée est corrompue (empreinte incorrecte). Recommencez.");
+                throw new IOException(L.T("L'image téléchargée est corrompue (empreinte incorrecte). Recommencez.",
+                                          "The downloaded image is corrupted (wrong checksum). Try again."));
             }
             if (File.Exists(path)) File.Delete(path);
             File.Move(partial, path);

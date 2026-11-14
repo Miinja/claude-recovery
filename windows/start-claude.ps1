@@ -1,60 +1,75 @@
-# Claude Recovery - mode Windows
+# Claude Recovery - Windows mode / mode Windows
+#
+# Diagnoses a software or browser problem on Windows, then cleans up completely.
 # Diagnostic d'un bug logiciel/navigateur sous Windows, puis nettoyage complet.
-# Present dans les deux editions : la procedure suivie depend de windows\edition.txt.
 #
-# A lancer depuis la cle, dans PowerShell :
-#   powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1
+# Run from the key, in PowerShell / A lancer depuis la cle, dans PowerShell :
+#   powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1 [-Lang fr|en]
 #
-# Ce que fait le script :
-#   1. cree un dossier de session temporaire (config, identifiants et travail de Claude)
-#   2. trouve Claude Code : windows\bin\claude.exe sur la cle, sinon celui du PC,
-#      sinon installation temporaire avec l'installeur officiel
-#   3. lance la session (le technicien se connecte au compte Claude de l'entreprise)
-#   4. a la fermeture, quoi qu'il arrive : deconnexion, copie du rapport sur la cle,
-#      suppression du dossier de session et de tout ce que l'installation a ajoute
+# What the script does:
+#   1. creates a temporary session folder (Claude's config, credentials and work)
+#   2. finds Claude Code: windows\bin\claude.exe on the key, else the one on the PC,
+#      else a temporary install with the official installer
+#   3. starts the session, following the procedure of the key's edition and language
+#      (windows\edition.txt and windows\lang.txt, written by the key on first boot)
+#   4. on exit, whatever happens: signs out, copies the report to the key, removes the
+#      session folder and everything the install added
 #
-# Rien de ce que le client avait deja (un Claude Code a lui, par exemple) n'est touche.
+# Nothing the PC already had (its own Claude Code, for instance) is touched.
 
 param(
-    [string]$Technicien,
-    [string]$Job
+    [string]$Technician,
+    [string]$Job,
+    [ValidateSet('', 'fr', 'en')][string]$Lang = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $KeyRoot = Split-Path -Parent $PSScriptRoot
 
-Write-Host ''
-Write-Host '=== Claude Recovery - mode Windows ===' -ForegroundColor Cyan
-
-# Edition de la cle (ecrite par la cle a son premier demarrage)
-$Edition = 'entreprise'
-$EditionFile = Join-Path $PSScriptRoot 'edition.txt'
-if (Test-Path $EditionFile) {
-    $read = (Get-Content $EditionFile -TotalCount 1).Trim()
-    if ($read -eq 'particulier') { $Edition = 'particulier' }
+function Read-KeyFile([string]$name, [string[]]$allowed, [string]$default) {
+    $file = Join-Path $PSScriptRoot $name
+    if (Test-Path $file) {
+        $value = (Get-Content $file -TotalCount 1).Trim()
+        if ($allowed -contains $value) { return $value }
+    }
+    return $default
 }
-Write-Host "Edition : $Edition"
+
+# Language: -Lang, else the key's language, else the language of this Windows.
+if (-not $Lang) {
+    $system = 'en'
+    if ((Get-UICulture).TwoLetterISOLanguageName -eq 'fr') { $system = 'fr' }
+    $Lang = Read-KeyFile 'lang.txt' @('fr', 'en') $system
+}
+function T([string]$fr, [string]$en) { if ($Lang -eq 'fr') { return $fr } else { return $en } }
+
+$Edition = Read-KeyFile 'edition.txt' @('entreprise', 'particulier') 'entreprise'
+
+Write-Host ''
+Write-Host (T '=== Claude Recovery - mode Windows ===' '=== Claude Recovery - Windows mode ===') -ForegroundColor Cyan
+if ($Edition -eq 'entreprise') { Write-Host (T 'Edition : entreprise' 'Edition: business') }
+else { Write-Host (T 'Edition : particulier' 'Edition: personal') }
 
 if ($Edition -eq 'entreprise') {
-    if (-not $Technicien) { $Technicien = Read-Host 'Technicien' }
-    if (-not $Technicien) { Write-Host 'Nom du technicien obligatoire.'; exit 1 }
-    if (-not $Job) { $Job = Read-Host 'Reference du job (ex. dupont-pc)' }
+    if (-not $Technician) { $Technician = Read-Host (T 'Technicien' 'Technician') }
+    if (-not $Technician) { Write-Host (T 'Nom du technicien obligatoire.' "The technician's name is required."); exit 1 }
+    if (-not $Job) { $Job = Read-Host (T 'Reference du job (ex. dupont-pc)' 'Job reference (e.g. smith-pc)') }
 } else {
-    $Technicien = 'particulier'
+    $Technician = 'personal'
     if (-not $Job) { $Job = 'diagnostic' }
 }
 $Job = ($Job -replace '[^A-Za-z0-9._-]', '-').Trim('-')
-if (-not $Job) { Write-Host 'Reference obligatoire.'; exit 1 }
+if (-not $Job) { Write-Host (T 'Reference obligatoire.' 'A reference is required.'); exit 1 }
 $Job = '{0}_{1}' -f (Get-Date -Format 'yyyy-MM-dd'), $Job
 
-# --- Dossiers ---------------------------------------------------------------
+# --- Folders ----------------------------------------------------------------
 $Session   = Join-Path $env:TEMP ('claude-recovery-' + [guid]::NewGuid().ToString('N'))
 $ConfigDir = Join-Path $Session 'config'
-$WorkDir   = Join-Path $Session 'travail'
+$WorkDir   = Join-Path $Session 'work'
 $Journal   = Join-Path $PSScriptRoot 'journal'
 New-Item -ItemType Directory -Force -Path $ConfigDir, $WorkDir, $Journal | Out-Null
 
-# --- Etat du PC avant notre passage (pour ne supprimer que ce qu'on ajoute) --
+# --- State of the PC before we touch it (so we only remove what we add) ------
 $UserHome   = $env:USERPROFILE
 $ExePath    = Join-Path $UserHome '.local\bin\claude.exe'
 $SharePath  = Join-Path $UserHome '.local\share\claude'
@@ -73,43 +88,43 @@ $Installed = $false
 $Claude = $null
 
 try {
-    # --- Trouver Claude Code -------------------------------------------------
+    # --- Find Claude Code ----------------------------------------------------
     $Portable = Join-Path $PSScriptRoot 'bin\claude.exe'
     $Existing = Get-Command claude -ErrorAction SilentlyContinue
     if (Test-Path $Portable) {
         $Claude = $Portable
-        Write-Host 'Claude Code : binaire de la cle.'
+        Write-Host (T 'Claude Code : binaire de la cle.' 'Claude Code: binary from the key.')
     } elseif ($Existing) {
         $Claude = $Existing.Source
-        Write-Host 'Claude Code : deja present sur ce PC (il ne sera pas desinstalle).'
+        Write-Host (T 'Claude Code : deja present sur ce PC (il ne sera pas desinstalle).' 'Claude Code: already on this PC (it will not be uninstalled).')
     } else {
-        Write-Host 'Claude Code : installation temporaire...'
+        Write-Host (T 'Claude Code : installation temporaire...' 'Claude Code: temporary install...')
         $Installed = $true
         Invoke-Expression (Invoke-RestMethod -Uri 'https://claude.ai/install.ps1')
-        if (-not (Test-Path $ExePath)) { throw "Installation echouee : $ExePath introuvable." }
+        if (-not (Test-Path $ExePath)) { throw (T "Installation echouee : $ExePath introuvable." "Install failed: $ExePath not found.") }
         $Claude = $ExePath
     }
 
-    # --- Config du mode Windows, isolee dans le dossier de session --------------
-    Copy-Item (Join-Path $KeyRoot "config\windows\CLAUDE.$Edition.md") (Join-Path $ConfigDir 'CLAUDE.md')
+    # --- Windows-mode config, isolated in the session folder -----------------
+    Copy-Item (Join-Path $KeyRoot "config\windows\CLAUDE.$Edition.$Lang.md") (Join-Path $ConfigDir 'CLAUDE.md')
     $HookPath = (Join-Path $PSScriptRoot 'log-command.ps1') -replace '\\', '\\'
     $Settings = (Get-Content (Join-Path $KeyRoot 'config\windows\settings.json') -Raw).Replace('__HOOK_PATH__', $HookPath)
     [System.IO.File]::WriteAllText((Join-Path $ConfigDir 'settings.json'), $Settings, (New-Object System.Text.UTF8Encoding($false)))
 
     $env:CLAUDE_CONFIG_DIR   = $ConfigDir
     $env:DISABLE_AUTOUPDATER = '1'
-    $env:RECOVERY_TECH    = $Technicien
+    $env:RECOVERY_TECH    = $Technician
     $env:RECOVERY_JOB     = $Job
     $env:RECOVERY_JOURNAL = Join-Path $Journal ($Job + '.jsonl')
 
     Write-Host ''
-    Write-Host "Job        : $Job"
+    Write-Host "Job : $Job"
     if ($Edition -eq 'entreprise') {
-        Write-Host "Technicien : $Technicien"
-        Write-Host 'Connectez-vous au compte Claude de votre entreprise quand Claude le demande.'
+        Write-Host ((T 'Technicien : ' 'Technician: ') + $Technician)
+        Write-Host (T 'Connectez-vous au compte Claude de votre entreprise quand Claude le demande.' "Sign in to your company's Claude account when Claude asks.")
     } else {
-        Write-Host 'Connectez-vous a votre compte Claude quand Claude le demande.'
-        Write-Host 'A la fermeture, tout ce que cette session a ajoute au PC sera supprime.'
+        Write-Host (T 'Connectez-vous a votre compte Claude quand Claude le demande.' 'Sign in to your Claude account when Claude asks.')
+        Write-Host (T 'A la fermeture, tout ce que cette session a ajoute au PC sera supprime.' 'On exit, everything this session added to the PC is removed.')
     }
     Write-Host ''
 
@@ -118,27 +133,27 @@ try {
 }
 finally {
     Write-Host ''
-    Write-Host '=== Nettoyage ===' -ForegroundColor Cyan
+    Write-Host (T '=== Nettoyage ===' '=== Cleanup ===') -ForegroundColor Cyan
     $ErrorActionPreference = 'Continue'
     $Problems = @()
 
-    # 1. Deconnexion du compte (invalide la session, pas seulement le fichier local)
+    # 1. Sign out (invalidates the session, not just the local file)
     if ($Claude -and (Test-Path $Claude) -and $env:CLAUDE_CONFIG_DIR) {
         try { & $Claude auth logout 2>&1 | Out-Null } catch { }
     }
 
-    # 2. Rapport recopie sur la cle
-    $Report = Join-Path $WorkDir 'rapport.md'
+    # 2. Report copied to the key
+    $Report = Join-Path $WorkDir 'report.md'
     if (Test-Path $Report) {
-        Copy-Item $Report (Join-Path $Journal ($Job + '_rapport.md')) -Force
-        Write-Host 'Rapport copie sur la cle.'
+        Copy-Item $Report (Join-Path $Journal ($Job + '_report.md')) -Force
+        Write-Host (T 'Rapport copie sur la cle.' 'Report copied to the key.')
     }
 
-    # 3. Dossier de session (config, identifiants, historique, travail)
+    # 3. Session folder (config, credentials, history, work)
     Remove-Item -Path $Session -Recurse -Force -ErrorAction SilentlyContinue
     if (Test-Path $Session) { $Problems += $Session }
 
-    # 4. Ce que l'installation temporaire a ajoute, et seulement cela
+    # 4. What the temporary install added, and only that
     if ($Installed) {
         if (-not $Before.Exe)       { Remove-Item $ExePath   -Force          -ErrorAction SilentlyContinue }
         if (-not $Before.Share)     { Remove-Item $SharePath -Recurse -Force -ErrorAction SilentlyContinue }
@@ -161,10 +176,10 @@ finally {
     Remove-Item Env:CLAUDE_CONFIG_DIR, Env:RECOVERY_TECH, Env:RECOVERY_JOB, Env:RECOVERY_JOURNAL, Env:DISABLE_AUTOUPDATER -ErrorAction SilentlyContinue
 
     if ($Problems.Count -gt 0) {
-        Write-Host 'ATTENTION : elements non supprimes, a retirer a la main :' -ForegroundColor Red
+        Write-Host (T 'ATTENTION : elements non supprimes, a retirer a la main :' 'WARNING: items not removed, delete them by hand:') -ForegroundColor Red
         $Problems | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
     } else {
-        Write-Host 'Nettoyage termine : rien ne reste sur ce PC.' -ForegroundColor Green
+        Write-Host (T 'Nettoyage termine : rien ne reste sur ce PC.' 'Cleanup done: nothing is left on this PC.') -ForegroundColor Green
     }
-    Write-Host "Journal de l'intervention : $Journal"
+    Write-Host ((T "Journal de l'intervention : " 'Session log: ') + $Journal)
 }

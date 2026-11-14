@@ -18,13 +18,13 @@ namespace ClaudeRecovery
 
         public override string ToString()
         {
-            return string.Format("{0}  -  {1}  (disque {2})", Model, FormatSize(Size), Number);
+            return string.Format("{0}  -  {1}  ({2} {3})", Model, FormatSize(Size), L.T("disque", "disk"), Number);
         }
 
         public static string FormatSize(long bytes)
         {
             double gb = bytes / 1000000000.0;
-            return gb >= 1 ? gb.ToString("0.#") + " Go" : (bytes / 1000000.0).ToString("0") + " Mo";
+            return gb >= 1 ? gb.ToString("0.#") + L.T(" Go", " GB") : (bytes / 1000000.0).ToString("0") + L.T(" Mo", " MB");
         }
     }
 
@@ -119,7 +119,7 @@ namespace ClaudeRecovery
                     if (size <= 0) continue;
                     string model = (AsciiAt(buf, BitConverter.ToInt32(buf, 12)) + " "
                                   + AsciiAt(buf, BitConverter.ToInt32(buf, 16))).Trim();
-                    disks.Add(new UsbDisk { Number = n, Model = model.Length > 0 ? model : "Disque USB", Size = size });
+                    disks.Add(new UsbDisk { Number = n, Model = model.Length > 0 ? model : L.T("Disque USB", "USB disk"), Size = size });
                 }
             }
             return disks;
@@ -134,7 +134,8 @@ namespace ClaudeRecovery
             // Garde-fou : on revérifie juste avant d'ecrire que c'est toujours la meme cle.
             UsbDisk now = ListUsb().Find(delegate(UsbDisk d) { return d.Number == disk.Number; });
             if (now == null || now.Size != disk.Size || now.Model != disk.Model)
-                throw new IOException("La clé a changé depuis sa sélection. Actualisez la liste et recommencez.");
+                throw new IOException(L.T("La clé a changé depuis sa sélection. Actualisez la liste et recommencez.",
+                                          "The key changed since it was selected. Refresh the list and try again."));
 
             var locks = new List<SafeFileHandle>();
             try
@@ -155,7 +156,8 @@ namespace ClaudeRecovery
                             if (!DeviceIoControl(v, FSCTL_LOCK_VOLUME, null, 0, null, 0, out ret, IntPtr.Zero))
                             {
                                 v.Dispose();
-                                throw new IOException("Un fichier de la clé est ouvert par un autre programme. Fermez-le (Explorateur compris) et recommencez.");
+                                throw new IOException(L.T("Un fichier de la clé est ouvert par un autre programme. Fermez-le (Explorateur compris) et recommencez.",
+                                                      "A file on the key is open in another program. Close it (File Explorer included) and try again."));
                             }
                             DeviceIoControl(v, FSCTL_DISMOUNT_VOLUME, null, 0, null, 0, out ret, IntPtr.Zero);
                             locks.Add(v);
@@ -166,7 +168,7 @@ namespace ClaudeRecovery
 
                 SafeFileHandle h = Open(PhysicalPath(disk.Number), GENERIC_READ | GENERIC_WRITE);
                 if (h.IsInvalid)
-                    throw new IOException("Ouverture de la clé impossible : " + new Win32Exception(Marshal.GetLastWin32Error()).Message);
+                    throw new IOException(L.T("Ouverture de la clé impossible : ", "Could not open the key: ") + new Win32Exception(Marshal.GetLastWin32Error()).Message);
                 int r;
                 DeviceIoControl(h, IOCTL_DISK_DELETE_DRIVE_LAYOUT, null, 0, null, 0, out r, IntPtr.Zero);
                 DeviceIoControl(h, IOCTL_DISK_UPDATE_PROPERTIES, null, 0, null, 0, out r, IntPtr.Zero);

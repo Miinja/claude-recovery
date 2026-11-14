@@ -15,9 +15,10 @@ namespace ClaudeRecovery
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            if (args.Length == 2 && args[0] == "--screenshot")
+            if (args.Length >= 2 && args[0] == "--screenshot")
             {
                 // Rendu de la fenetre dans un PNG, pour controler la mise en page.
+                if (args.Length >= 3) L.Lang = args[2] == "fr" ? "fr" : "en";
                 using (var form = new MainForm())
                 {
                     form.Show();
@@ -32,7 +33,8 @@ namespace ClaudeRecovery
             }
             if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
             {
-                MessageBox.Show("L'écriture d'une clé USB demande les droits d'administrateur.\nFaites un clic droit sur le programme, puis « Exécuter en tant qu'administrateur ».",
+                MessageBox.Show(L.T("L'écriture d'une clé USB demande les droits d'administrateur.\nFaites un clic droit sur le programme, puis « Exécuter en tant qu'administrateur ».",
+                                    "Writing a USB key requires administrator rights.\nRight-click the program, then \"Run as administrator\"."),
                     "Claude Recovery", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return 1;
             }

@@ -23,10 +23,10 @@ Arborescence du dossier :
 
 ```
 image/       image.img, image.map (ddrescue), image.sha256
-travail/     copies de travail de l'image
-recupere/    les fichiers récupérés
+work/     copies de travail de l'image
+recovered/    les fichiers récupérés
 notes.md     ton journal de bord
-rapport.md   le compte rendu final
+report.md   le compte rendu final
 ```
 
 Les commandes que tu lances sont journalisées sur la clé, nulle part ailleurs.
@@ -124,10 +124,10 @@ système de fichiers abîmé, fichiers supprimés).
 
 Du plus propre au plus brutal :
 
-1. **Ouvrir la copie en lecture seule** et recopier les fichiers vers `recupere/`
+1. **Ouvrir la copie en lecture seule** et recopier les fichiers vers `recovered/`
    (`rsync -a --info=progress2`). Noms et dossiers sont conservés.
 2. **Réparer la structure sur une seconde copie** (`cp --sparse=always image/image.img
-   travail/`) avec `testdisk`. Demande l'accord avant.
+   work/`) avec `testdisk`. Demande l'accord avant.
 3. **Récupération par signatures** (`photorec`) en dernier recours. Préviens : les
    fichiers reviennent sans leur nom ni leur dossier, il faudra les trier.
 
@@ -137,16 +137,16 @@ Du plus propre au plus brutal :
   documents).
 - Si la personne cherchait des fichiers précis, vérifie qu'ils y sont (par leur nom).
 - Après `photorec`, classe par type et par date (`exiftool` pour les photos).
-- Passe `clamscan -r --infected recupere/` et signale tout fichier infecté sans le
+- Passe `clamscan -r --infected recovered/` et signale tout fichier infecté sans le
   supprimer.
 
 ### 8. Conclure
 
-Écris `rapport.md` : ce qui s'est passé, l'état du disque, ce qui a été récupéré et où,
+Écris `report.md` : ce qui s'est passé, l'état du disque, ce qui a été récupéré et où,
 ce qui manque, et des conseils simples (ne plus utiliser le disque malade, faire une
 sauvegarde des fichiers récupérés sur un second support).
 
-Rappelle à la personne où sont ses fichiers (`recupere/` sur son disque de destination)
+Rappelle à la personne où sont ses fichiers (`recovered/` sur son disque de destination)
 et qu'elle peut éteindre le PC et retirer la clé.
 
 ## Disque suspect (virus, rançongiciel)

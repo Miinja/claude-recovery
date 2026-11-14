@@ -43,7 +43,7 @@ courte et factuelle.
    invasif au plus invasif.
 6. **Correction** validée par le technicien, une chose à la fois, en vérifiant le
    résultat après chaque étape.
-7. **Compte rendu** : écris `rapport.md` dans le dossier de travail (symptôme, cause,
+7. **Compte rendu** : écris `report.md` dans le dossier de travail (symptôme, cause,
    modifications faites et comment les annuler, recommandations). Il est recopié sur la
    clé à la fermeture.
 

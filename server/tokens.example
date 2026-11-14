@@ -1,4 +1,6 @@
+# Copy to tokens.txt (never committed). One USB key per line: name token
+# Generate a token:   openssl rand -hex 32
+# Revoke a lost key:  delete its line (takes effect immediately).
+#
 # À copier en tokens.txt (jamais commité). Une clé USB par ligne : nom jeton
-# Générer un jeton :  openssl rand -hex 32
-# Révoquer une clé perdue : supprimer sa ligne (pris en compte immédiatement).
-cle01  REMPLACER_PAR_UN_JETON_DE_64_CARACTERES
+key01  REPLACE_WITH_A_64_CHARACTER_TOKEN

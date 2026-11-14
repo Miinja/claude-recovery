@@ -41,6 +41,6 @@ systemctl enable claude-recovery-update.service
 cat > /etc/motd <<EOF
 
   Claude Recovery — édition $EDITION ($(cat /usr/share/claude-recovery/version))
-  Tapez  claude-recovery  pour commencer.
+  Type  claude-recovery  to start.   /   Tapez  claude-recovery  pour commencer.
 
 EOF

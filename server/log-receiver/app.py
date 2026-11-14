@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Récepteur de journaux Claude Recovery (bibliothèque standard uniquement).
+"""Claude Recovery log receiver (standard library only).
 
-  GET  /healthz                    état du service
-  POST /api/logs                   lignes JSON (NDJSON), une par commande
-  PUT  /api/jobs/<job>/rapport     rapport.md de fin de job
+  GET  /healthz                   service status
+  POST /api/logs                  JSON lines (NDJSON), one per command
+  PUT  /api/jobs/<job>/report     end-of-job report.md
 
-Authentification : en-tête `Authorization: Bearer <jeton>`, un jeton par clé USB,
-déclaré dans le fichier de jetons (`nom_de_la_cle jeton`, une clé par ligne).
-Stockage : <DATA>/<job>/commands.jsonl et <DATA>/<job>/rapport.md.
+Authentication: `Authorization: Bearer <token>` header, one token per USB key,
+declared in the tokens file (`key_name token`, one key per line).
+Storage: <DATA>/<job>/commands.jsonl and <DATA>/<job>/report.md.
 """
 import hmac
 import json
@@ -24,14 +24,15 @@ PORT = int(os.environ.get("RECEIVER_PORT", "8080"))
 MAX_LOG_BYTES = 4 * 1024 * 1024
 MAX_REPORT_BYTES = 5 * 1024 * 1024
 MIN_TOKEN_LEN = 24
+PLACEHOLDER = "REPLACE_"          # unchanged example value from tokens.example
 
 SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
-REPORT_PATH = re.compile(r"^/api/jobs/([^/]+)/rapport$")
+REPORT_PATH = re.compile(r"^/api/jobs/([^/]+)/report$")
 write_lock = threading.Lock()
 
 
 def load_tokens():
-    """Relu à chaque requête : ajouter ou révoquer une clé ne demande aucun redémarrage."""
+    """Re-read on every request: adding or revoking a key needs no restart."""
     tokens = {}
     try:
         for line in TOKENS_FILE.read_text(encoding="utf-8").splitlines():
@@ -41,7 +42,7 @@ def load_tokens():
                 len(parts) == 2
                 and SAFE_NAME.match(parts[0])
                 and len(parts[1]) >= MIN_TOKEN_LEN
-                and not parts[1].startswith("REMPLACER")  # valeur d'exemple non changée
+                and not parts[1].startswith(PLACEHOLDER)
             ):
                 tokens[parts[0]] = parts[1]
     except OSError:
@@ -50,11 +51,11 @@ def load_tokens():
 
 
 def job_name(value):
-    return value if isinstance(value, str) and SAFE_NAME.match(value) else "sans-job"
+    return value if isinstance(value, str) and SAFE_NAME.match(value) else "no-job"
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "log-receiver/1"
+    server_version = "claude-recovery-logs/1"
 
     def reply(self, code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -65,14 +66,14 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def key_name(self):
-        """Nom de la clé USB authentifiée, ou None."""
+        """Name of the authenticated USB key, or None."""
         header = self.headers.get("Authorization", "")
         if not header.startswith("Bearer "):
             return None
         given = header[7:].strip().encode("utf-8")
         found = None
         for name, token in load_tokens().items():
-            # Comparaison à temps constant, sans sortie anticipée.
+            # Constant-time comparison, no early exit.
             if hmac.compare_digest(given, token.encode("utf-8")):
                 found = name
         return found
@@ -81,25 +82,25 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", ""))
         except ValueError:
-            self.reply(411, {"error": "Content-Length requis"})
+            self.reply(411, {"error": "Content-Length required"})
             return None
         if length < 0 or length > limit:
-            self.reply(413, {"error": "corps trop volumineux"})
+            self.reply(413, {"error": "body too large"})
             return None
         return self.rfile.read(length)
 
     def do_GET(self):
         if self.path == "/healthz":
-            self.reply(200, {"status": "ok", "cles": len(load_tokens())})
+            self.reply(200, {"status": "ok", "keys": len(load_tokens())})
         else:
-            self.reply(404, {"error": "inconnu"})
+            self.reply(404, {"error": "not found"})
 
     def do_POST(self):
         if self.path != "/api/logs":
-            return self.reply(404, {"error": "inconnu"})
+            return self.reply(404, {"error": "not found"})
         key = self.key_name()
         if key is None:
-            return self.reply(401, {"error": "jeton invalide"})
+            return self.reply(401, {"error": "invalid token"})
         body = self.read_body(MAX_LOG_BYTES)
         if body is None:
             return
@@ -116,9 +117,9 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(entry, dict):
                 rejected += 1
                 continue
-            # Le nom de la clé vient du jeton, pas de ce que la clé déclare.
+            # The key name comes from the token, not from what the key claims.
             entry["key"] = key
-            entry["recu"] = received
+            entry["received"] = received
             by_job.setdefault(job_name(entry.get("job")), []).append(
                 json.dumps(entry, ensure_ascii=False)
             )
@@ -128,29 +129,29 @@ class Handler(BaseHTTPRequestHandler):
                 folder.mkdir(parents=True, exist_ok=True)
                 with open(folder / "commands.jsonl", "a", encoding="utf-8") as out:
                     out.write("\n".join(lines) + "\n")
-        self.reply(200, {"recues": sum(len(v) for v in by_job.values()), "rejetees": rejected})
+        self.reply(200, {"accepted": sum(len(v) for v in by_job.values()), "rejected": rejected})
 
     def do_PUT(self):
         match = REPORT_PATH.match(self.path)
         if not match:
-            return self.reply(404, {"error": "inconnu"})
+            return self.reply(404, {"error": "not found"})
         key = self.key_name()
         if key is None:
-            return self.reply(401, {"error": "jeton invalide"})
+            return self.reply(401, {"error": "invalid token"})
         if not SAFE_NAME.match(match.group(1)):
-            return self.reply(400, {"error": "référence de job invalide"})
+            return self.reply(400, {"error": "invalid job reference"})
         body = self.read_body(MAX_REPORT_BYTES)
         if body is None:
             return
         folder = DATA / match.group(1)
-        target = folder / "rapport.md"
+        target = folder / "report.md"
         with write_lock:
             folder.mkdir(parents=True, exist_ok=True)
             if target.exists():
-                # On garde les versions précédentes : un rapport n'est jamais écrasé.
-                target.rename(folder / f"rapport.{time.strftime('%Y%m%d-%H%M%S')}.md")
+                # Earlier versions are kept: a report is never overwritten.
+                target.rename(folder / f"report.{time.strftime('%Y%m%d-%H%M%S')}.md")
             target.write_bytes(body)
-        self.reply(200, {"job": match.group(1), "octets": len(body), "cle": key})
+        self.reply(200, {"job": match.group(1), "bytes": len(body), "key": key})
 
     def log_message(self, fmt, *args):
         print(f"{self.address_string()} {fmt % args}", flush=True)
@@ -158,5 +159,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     DATA.mkdir(parents=True, exist_ok=True)
-    print(f"log-receiver : écoute sur :{PORT}, données dans {DATA}", flush=True)
+    print(f"log receiver: listening on :{PORT}, data in {DATA}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

@@ -20,7 +20,10 @@ for part in "${PARTS[@]}"; do
   mount "$part" "$MNT"
   dest="$MNT/home/recovery/.claude"
   mkdir -p "$dest" "$MNT/opt/claude-recovery/hooks"
-  rsync -a "$ROOT/config/$EDITION/CLAUDE.md" "$ROOT/config/$EDITION/settings.json" "$dest/"
+  # Langue de la clé : celle de son config.env, français à défaut
+  key_lang="$(sed -n "s/^RECOVERY_LANG='\(fr\|en\)'$/\1/p" "$MNT/etc/claude-recovery/config.env" 2>/dev/null | tail -n 1)"
+  cp "$ROOT/config/$EDITION/CLAUDE.${key_lang:-fr}.md" "$dest/CLAUDE.md"
+  cp "$ROOT/config/$EDITION/settings.json" "$dest/"
   rsync -a "$ROOT/hooks/" "$MNT/opt/claude-recovery/hooks/"
   # L'utilisateur live « recovery » a l'uid 1000
   chown -R 1000:1000 "$MNT/home/recovery" "$MNT/opt/claude-recovery"

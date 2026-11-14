@@ -27,6 +27,7 @@ dossiers-clients/
 clients/
 
 # --- Rapports de fin de job (n° de série, technicien, client) ---
+report.md
 rapport.md
 rapport-*.md
 rapports/

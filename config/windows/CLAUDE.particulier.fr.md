@@ -39,7 +39,7 @@ vas faire avant de le faire. Résume les résultats au lieu d'afficher de longue
 5. **Expliquer** la cause probable en langage courant, et ce que tu proposes, en
    commençant par le moins risqué.
 6. **Corriger** avec l'accord de la personne, puis vérifier avec elle que c'est réglé.
-7. **Compte rendu** : écris `rapport.md` dans le dossier de travail (le problème, la
+7. **Compte rendu** : écris `report.md` dans le dossier de travail (le problème, la
    cause, ce qui a été modifié et comment l'annuler, quelques conseils). Il est recopié
    sur la clé à la fermeture.
 

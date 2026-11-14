@@ -22,10 +22,10 @@ Arborescence du dossier de job :
 
 ```
 image/       image.img, image.map (ddrescue), image.sha256
-travail/     copies de travail de l'image (réparations)
-recupere/    fichiers récupérés, triés
+work/     copies de travail de l'image (réparations)
+recovered/    fichiers récupérés, triés
 notes.md     ton journal de bord, tenu au fil de l'eau
-rapport.md   rapport de fin de job
+report.md   rapport de fin de job
 ```
 
 Toutes les commandes que tu lances sont journalisées et envoyées au serveur de l’entreprise lorsqu’il est configuré.
@@ -114,11 +114,11 @@ aucune attaque.
 
 Dans cet ordre, du moins au plus invasif :
 
-1. **Montage en lecture seule** de la partition dans l'image, puis copie vers `recupere/`
+1. **Montage en lecture seule** de la partition dans l'image, puis copie vers `recovered/`
    (`rsync -a --info=progress2`). Si ça marche, c'est le meilleur résultat : noms et
    arborescence conservés.
 2. **Réparation de structure sur une copie** : `cp --sparse=always image/image.img
-   travail/`, puis `testdisk`, `fsck` ou `ntfsfix` sur la copie uniquement. Explique au
+   work/`, puis `testdisk`, `fsck` ou `ntfsfix` sur la copie uniquement. Explique au
    technicien ce que la commande va modifier et attends son accord.
 3. **Récupération par signatures** (`photorec`) en dernier recours : les noms et
    l'arborescence sont perdus. Préviens-en le technicien avant de lancer.
@@ -129,12 +129,12 @@ Dans cet ordre, du moins au plus invasif :
   (`find … | file -f -`), fichiers de taille nulle.
 - Dédoublonner (`fdupes -r`) : lister seulement, ne rien supprimer sans accord.
 - Après `photorec` : classer par type et par date (`exiftool` pour les photos).
-- Passer `clamscan -r --infected recupere/` avant restitution. Fichier infecté : le
+- Passer `clamscan -r --infected recovered/` avant restitution. Fichier infecté : le
   signaler, ne pas le supprimer.
 
 ### 7. Clôturer
 
-Écris `rapport.md` (voir plus bas), vérifie que `notes.md` est à jour, puis dis au
+Écris `report.md` (voir plus bas), vérifie que `notes.md` est à jour, puis dis au
 technicien que le job est prêt à être clôturé. Le rapport est envoyé au serveur à la
 fermeture de la session.
 
@@ -159,7 +159,7 @@ sans réseau (`-nic none`).
 
 Tiens `notes.md` au fil de l'eau : heure, action, résultat, décision du technicien.
 
-En fin de job, écris `rapport.md` :
+En fin de job, écris `report.md` :
 
 ```
 # Rapport de récupération — <référence du job>

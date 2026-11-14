@@ -82,3 +82,43 @@ cr_blob_erase() {
 cr_env_line() {
   printf "%s='%s'\n" "$1" "$(printf '%s' "$2" | sed "s/'/'\\\\''/g")"
 }
+
+# --- Langue -------------------------------------------------------------------
+# RECOVERY_LANG (fr ou en) vient de /etc/claude-recovery/config.env : écrit par
+# l'installeur, changeable avec `claude-recovery lang fr|en`. À défaut, on suit la
+# langue du système.
+cr_lang() {
+  case "${RECOVERY_LANG:-}" in
+    fr|en) echo "$RECOVERY_LANG" ;;
+    *) case "${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}" in fr*) echo fr ;; *) echo en ;; esac ;;
+  esac
+}
+
+# t "texte français" "English text" : affiche le texte dans la langue courante (CR_LANG)
+t() {
+  if [ "${CR_LANG:-en}" = "fr" ]; then printf '%s\n' "$1"; else printf '%s\n' "$2"; fi
+}
+
+# ask VARIABLE "question française" "English question" : pose la question, range la réponse
+ask() {
+  local __p
+  __p="$(t "$2" "$3")"
+  read -r -p "$__p " "$1"
+}
+
+# is_yes / is_no : accepte oui/yes et non/no dans les deux langues
+is_yes() { case "$1" in o|O|oui|Oui|OUI|y|Y|yes|Yes|YES) return 0 ;; esac; return 1; }
+is_no()  { case "$1" in n|N|non|Non|NON|no|No|NO) return 0 ;; esac; return 1; }
+
+# cr_set_lang fr|en : enregistre la langue dans config.env (sudo si nécessaire)
+cr_set_lang() {
+  local f=/etc/claude-recovery/config.env sudo=""
+  case "$1" in fr|en) ;; *) return 1 ;; esac
+  [ "$(id -u)" -eq 0 ] || sudo="sudo"
+  $sudo mkdir -p /etc/claude-recovery
+  $sudo touch "$f"
+  $sudo sed -i '/^RECOVERY_LANG=/d' "$f"
+  echo "RECOVERY_LANG='$1'" | $sudo tee -a "$f" >/dev/null
+  # Le lanceur tourne sans privilèges : il doit pouvoir relire ce fichier.
+  $sudo chown 1000:1000 "$f"; $sudo chmod 600 "$f"
+}
