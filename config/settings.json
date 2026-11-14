@@ -1,22 +1,53 @@
 {
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  },
   "permissions": {
     "deny": [
       "Bash(mkfs*)",
+      "Bash(sudo mkfs*)",
       "Bash(wipefs*)",
+      "Bash(sudo wipefs*)",
       "Bash(shred*)",
+      "Bash(sudo shred*)",
       "Bash(blkdiscard*)",
+      "Bash(sudo blkdiscard*)",
       "Bash(dd *of=/dev/*)",
-      "Bash(rm -rf /*)"
+      "Bash(sudo dd *of=/dev/*)",
+      "Bash(sgdisk *--zap*)",
+      "Bash(sudo sgdisk *--zap*)",
+      "Bash(hdparm *--security-erase*)",
+      "Bash(sudo hdparm *--security-erase*)",
+      "Bash(nvme format*)",
+      "Bash(sudo nvme format*)",
+      "Bash(cryptsetup luksFormat*)",
+      "Bash(sudo cryptsetup luksFormat*)",
+      "Bash(rm -rf /*)",
+      "Bash(sudo rm -rf /*)"
     ],
     "ask": [
       "Bash(testdisk*)",
+      "Bash(sudo testdisk*)",
+      "Bash(photorec*)",
+      "Bash(sudo photorec*)",
       "Bash(fsck*)",
+      "Bash(sudo fsck*)",
       "Bash(e2fsck*)",
+      "Bash(sudo e2fsck*)",
       "Bash(ntfsfix*)",
+      "Bash(sudo ntfsfix*)",
       "Bash(fdisk*)",
+      "Bash(sudo fdisk*)",
       "Bash(sgdisk*)",
+      "Bash(sudo sgdisk*)",
       "Bash(parted*)",
-      "Bash(mount*)"
+      "Bash(sudo parted*)",
+      "Bash(mount*)",
+      "Bash(sudo mount*)",
+      "Bash(ddrescue*)",
+      "Bash(sudo ddrescue*)",
+      "Bash(apt*)",
+      "Bash(sudo apt*)"
     ]
   },
   "hooks": {

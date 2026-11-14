@@ -1,0 +1,19 @@
+# À ajouter au Caddyfile existant, puis recharger Caddy.
+# Remplacer les noms par ceux de server/.env.
+#
+# Nom interne (non résolu sur Internet) : garder `tls internal`. Les clés doivent
+# alors faire confiance à l'autorité locale de Caddy (voir README.md).
+# Nom public : supprimer `tls internal`, Caddy obtient un certificat tout seul.
+
+git.exemple.lan {
+	tls internal
+	reverse_proxy forgejo:3000
+}
+
+logs.exemple.lan {
+	tls internal
+	request_body {
+		max_size 6MB
+	}
+	reverse_proxy ordi-logs:8080
+}

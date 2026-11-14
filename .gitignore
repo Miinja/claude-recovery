@@ -57,6 +57,15 @@ id_ed25519*
 .npmrc
 credentials*
 secrets/
+ordi.env
+tokens.txt
+
+# --- Serveur : état des conteneurs (dépôts Forgejo, journaux reçus) ---
+server/data/
+
+# --- Mode Windows : binaire embarqué et journaux d'intervention ---
+windows/bin/
+windows/journal/
 
 # --- Claude Code : réglages locaux / session ---
 .claude/settings.local.json

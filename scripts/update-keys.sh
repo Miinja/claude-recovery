@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Met à jour la config de toutes les clés Claude Recovery branchées sur ce poste.
-# Les clés sont repérées par l'étiquette de leur partition de persistance.
+# Met à jour la config de toutes les clés Claude Recovery branchées sur ce poste,
+# sans les démarrer (les clés se mettent aussi à jour seules, par git pull, à chaque
+# session). Les clés sont repérées par l'étiquette de leur partition de persistance.
+# Une persistance chiffrée (LUKS) doit d'abord être ouverte avec `cryptsetup open`.
 set -euo pipefail
 
 LABEL="persistence"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MNT="$(mktemp -d)"
 
+[ "$(id -u)" -eq 0 ] || { echo "À lancer en root (sudo)." >&2; exit 1; }
+
 mapfile -t PARTS < <(blkid -t LABEL="$LABEL" -o device || true)
-[ ${#PARTS[@]} -gt 0 ] || { echo "Aucune clé trouvée."; exit 1; }
+[ ${#PARTS[@]} -gt 0 ] || { echo "Aucune clé trouvée."; rmdir "$MNT"; exit 1; }
 
 for part in "${PARTS[@]}"; do
   echo "→ Mise à jour de $part"
@@ -17,6 +21,8 @@ for part in "${PARTS[@]}"; do
   mkdir -p "$dest" "$MNT/opt/ordi/hooks"
   rsync -a "$ROOT/config/CLAUDE.md" "$ROOT/config/settings.json" "$dest/"
   rsync -a "$ROOT/hooks/" "$MNT/opt/ordi/hooks/"
+  # L'utilisateur live « ordi » a l'uid 1000
+  chown -R 1000:1000 "$MNT/home/ordi" "$MNT/opt/ordi"
   sync && umount "$MNT"
 done
 

@@ -11,22 +11,47 @@ dosfstools
 e2fsprogs
 btrfs-progs
 xfsprogs
+f2fs-tools
+hfsprogs
+dislocker
+mdadm
+lvm2
+cryptsetup
+cryptsetup-initramfs
 gdisk
 parted
 fdisk
+# Matériel
+lshw
+pciutils
+usbutils
+dmidecode
 # Analyse / tri
 file
 jq
 fdupes
-exiftool
+libimage-exiftool-perl
 clamav
 # VM pour disques suspects
 qemu-system-x86
 qemu-utils
+# Réseau (Wi-Fi chez le client) et firmwares
+network-manager
+firmware-linux
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
 # Outils
+sudo
 git
 curl
+ca-certificates
+rsync
 tmux
+pv
+less
+nano
 openssh-client
-nodejs
-npm
+util-linux
+locales
+console-setup

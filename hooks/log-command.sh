@@ -1,23 +1,74 @@
 #!/usr/bin/env bash
 # Hook PostToolUse : journalise chaque commande lancée par Claude.
 # Claude Code envoie le détail de l'appel en JSON sur stdin.
+#
+#   log-command.sh           mode hook (lit stdin)
+#   log-command.sh --flush   vide la file d'attente vers le serveur
+#
+# Chaque entrée est écrite dans commands.jsonl (archive locale) et dans une file
+# d'attente envoyée au serveur. Hors ligne, la file s'accumule et part au prochain
+# envoi réussi. Ce script n'échoue jamais : il ne doit pas bloquer un job.
 set -u
 
-LOG_DIR="${ORDI_LOG_DIR:-/var/log/ordi}"
-SERVER_URL="${ORDI_LOG_URL:-}"   # ex: https://serveur-ordi.local/api/logs (à définir)
-TECH="${ORDI_TECH:-inconnu}"
+# shellcheck disable=SC1091
+[ -r /etc/ordi/ordi.env ] && . /etc/ordi/ordi.env
 
-mkdir -p "$LOG_DIR"
+LOG_DIR="${ORDI_LOG_DIR:-/var/log/ordi}"
+SERVER_URL="${ORDI_LOG_URL:-}"
+TOKEN="${ORDI_LOG_TOKEN:-}"
+QUEUE="$LOG_DIR/queue.jsonl"        # entrées pas encore prises en charge
+SENDING="$LOG_DIR/queue.sending"    # lot en cours d'envoi
+
+mkdir -p "$LOG_DIR" 2>/dev/null || exit 0
+
+flush_queue() {
+  [ -n "$SERVER_URL" ] || return 0
+  (
+    # Un seul expéditeur à la fois.
+    flock -n 8 || exit 0
+    # Bascule de la file vers le lot, sous le même verrou que les écritures.
+    (
+      flock -w 5 9 || exit 0
+      if [ -s "$QUEUE" ]; then
+        cat "$QUEUE" >> "$SENDING" && : > "$QUEUE"
+      fi
+    ) 9>"$LOG_DIR/.queue.lock"
+    [ -s "$SENDING" ] || exit 0
+    code="$(curl -s -o /dev/null -w '%{http_code}' -m 5 \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/x-ndjson' \
+      --data-binary @"$SENDING" "${SERVER_URL%/}/api/logs" 2>/dev/null)" || code=000
+    case "$code" in
+      2*) rm -f "$SENDING" ;;
+    esac
+  ) 8>"$LOG_DIR/.send.lock"
+}
+
+if [ "${1:-}" = "--flush" ]; then
+  flush_queue
+  exit 0
+fi
+
 payload="$(cat)"
-entry="$(jq -c --arg tech "$TECH" --arg host "$(hostname)" --arg ts "$(date -Iseconds)" \
-  '{ts: $ts, tech: $tech, host: $host, command: .tool_input.command, session: .session_id}' \
+entry="$(jq -c \
+  --arg ts "$(date -Iseconds)" \
+  --arg tech "${ORDI_TECH:-inconnu}" \
+  --arg job "${ORDI_JOB:-sans-job}" \
+  --arg key "${ORDI_KEY_ID:-}" \
+  --arg host "$(hostname)" \
+  '{ts: $ts, tech: $tech, job: $job, key: $key, host: $host,
+    session: .session_id, cwd: .cwd, tool: .tool_name,
+    command: .tool_input.command,
+    interrupted: (.tool_response.interrupted // false)}' \
   <<<"$payload" 2>/dev/null)"
 
 [ -n "$entry" ] || exit 0
-echo "$entry" >> "$LOG_DIR/commands.jsonl"
 
-# Envoi au serveur si configuré (n'échoue jamais le job)
-if [ -n "$SERVER_URL" ]; then
-  curl -s -m 5 -H 'Content-Type: application/json' -d "$entry" "$SERVER_URL" >/dev/null 2>&1 || true
-fi
+(
+  flock -w 5 9 || exit 0
+  echo "$entry" >> "$LOG_DIR/commands.jsonl"
+  echo "$entry" >> "$QUEUE"
+) 9>"$LOG_DIR/.queue.lock"
+
+flush_queue
 exit 0

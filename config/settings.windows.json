@@ -1,0 +1,65 @@
+{
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "permissions": {
+    "deny": [
+      "PowerShell(Format-Volume *)",
+      "PowerShell(Clear-Disk *)",
+      "PowerShell(Initialize-Disk *)",
+      "PowerShell(Remove-Partition *)",
+      "PowerShell(Reset-PhysicalDisk *)",
+      "PowerShell(diskpart*)",
+      "PowerShell(format *)",
+      "PowerShell(cipher /w*)",
+      "PowerShell(systemreset*)",
+      "PowerShell(bcdedit *)",
+      "PowerShell(Disable-BitLocker *)",
+      "PowerShell(manage-bde *)",
+      "PowerShell(vssadmin delete*)",
+      "PowerShell(cmdkey *)",
+      "PowerShell(net user *)",
+      "PowerShell(Set-MpPreference *)",
+      "Bash(format *)",
+      "Bash(diskpart*)",
+      "Bash(rm -rf /*)"
+    ],
+    "ask": [
+      "PowerShell(Remove-Item *)",
+      "PowerShell(Uninstall-*)",
+      "PowerShell(winget *)",
+      "PowerShell(msiexec *)",
+      "PowerShell(Set-ItemProperty *)",
+      "PowerShell(New-ItemProperty *)",
+      "PowerShell(Remove-ItemProperty *)",
+      "PowerShell(reg *)",
+      "PowerShell(Stop-Service *)",
+      "PowerShell(Set-Service *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(taskkill *)",
+      "PowerShell(Unregister-ScheduledTask *)",
+      "PowerShell(Disable-ScheduledTask *)",
+      "PowerShell(sfc *)",
+      "PowerShell(DISM *)",
+      "PowerShell(chkdsk *)",
+      "PowerShell(netsh *)",
+      "PowerShell(Restart-Computer*)",
+      "PowerShell(shutdown *)",
+      "PowerShell(Checkpoint-Computer*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe",
+            "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "__HOOK_PATH__"]
+          }
+        ]
+      }
+    ]
+  }
+}

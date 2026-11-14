@@ -1,0 +1,42 @@
+# Services Claude Recovery sur la VM Debian d'ORDIServices :
+#   forgejo    dépôt de config tiré par les clés (git pull à chaque session)
+#   ordi-logs  réception des journaux d'intervention et des rapports de job
+#
+# Aucun port n'est publié : Caddy (déjà en place) joint les deux services par le
+# réseau Docker ${CADDY_NETWORK}. Voir README.md et Caddyfile.snippet.
+services:
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-17}
+    container_name: forgejo
+    restart: unless-stopped
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      FORGEJO__server__DOMAIN: ${GIT_DOMAIN}
+      FORGEJO__server__ROOT_URL: https://${GIT_DOMAIN}/
+      FORGEJO__server__DISABLE_SSH: "true"
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+    volumes:
+      - ./data/forgejo:/data
+      - /etc/localtime:/etc/localtime:ro
+    networks: [proxy]
+
+  ordi-logs:
+    build: ./log-receiver
+    container_name: ordi-logs
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Paris
+    volumes:
+      - ./data/logs:/data
+      - ./tokens.txt:/config/tokens.txt:ro
+    networks: [proxy]
+
+networks:
+  proxy:
+    external: true
+    name: ${CADDY_NETWORK}

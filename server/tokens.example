@@ -1,0 +1,4 @@
+# À copier en tokens.txt (jamais commité). Une clé USB par ligne : nom jeton
+# Générer un jeton :  openssl rand -hex 32
+# Révoquer une clé perdue : supprimer sa ligne (pris en compte immédiatement).
+cle01  REMPLACER_PAR_UN_JETON_DE_64_CARACTERES
