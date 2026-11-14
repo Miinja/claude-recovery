@@ -1,0 +1,86 @@
+# Pousser un tag vX.Y.Z construit les deux éditions de la clé et l'installeur Windows,
+# puis les publie dans une release GitHub.
+#
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# Les noms des fichiers publiés sont fixes : l'installeur et make-key.sh téléchargent
+# toujours .../releases/latest/download/claude-recovery-<édition>.iso
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  iso:
+    name: Image ${{ matrix.edition }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [entreprise, particulier]
+    container:
+      image: debian:trixie
+      # live-build monte /proc, /sys et /dev dans le chroot qu'il construit
+      options: --privileged
+    steps:
+      - name: Outils de build
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends live-build git ca-certificates curl cpio xz-utils
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Construire l'image
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          build/build-iso.sh ${{ matrix.edition }}
+          ls -lh build/out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iso-${{ matrix.edition }}
+          path: build/out/claude-recovery-${{ matrix.edition }}.iso*
+          compression-level: 0
+          retention-days: 3
+
+  installer:
+    name: Installeur Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compiler
+        shell: powershell
+        run: .\installer\build.ps1 -Version "${{ github.ref_name }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: installer/out/ClaudeRecoveryInstaller.exe
+          retention-days: 3
+
+  release:
+    name: Publier la release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [iso, installer]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Créer la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ls -lh dist
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Claude Recovery $TAG" \
+            --generate-notes

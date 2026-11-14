@@ -8,7 +8,7 @@
 #   1. cree un dossier de session temporaire (config, identifiants et travail de Claude)
 #   2. trouve Claude Code : windows\bin\claude.exe sur la cle, sinon celui du PC,
 #      sinon installation temporaire avec l'installeur officiel
-#   3. lance la session (le technicien se connecte au compte Claude d'ORDIServices)
+#   3. lance la session (le technicien se connecte au compte Claude de l'entreprise)
 #   4. a la fermeture, quoi qu'il arrive : deconnexion, copie du rapport sur la cle,
 #      suppression du dossier de session et de tout ce que l'installation a ajoute
 #
@@ -75,10 +75,10 @@ try {
         $Claude = $ExePath
     }
 
-    # --- Config ORDIServices, isolee dans le dossier de session --------------
-    Copy-Item (Join-Path $KeyRoot 'config\CLAUDE.windows.md') (Join-Path $ConfigDir 'CLAUDE.md')
+    # --- Config du mode Windows, isolee dans le dossier de session --------------
+    Copy-Item (Join-Path $KeyRoot 'config\windows\CLAUDE.md') (Join-Path $ConfigDir 'CLAUDE.md')
     $HookPath = (Join-Path $PSScriptRoot 'log-command.ps1') -replace '\\', '\\'
-    $Settings = (Get-Content (Join-Path $KeyRoot 'config\settings.windows.json') -Raw).Replace('__HOOK_PATH__', $HookPath)
+    $Settings = (Get-Content (Join-Path $KeyRoot 'config\windows\settings.json') -Raw).Replace('__HOOK_PATH__', $HookPath)
     [System.IO.File]::WriteAllText((Join-Path $ConfigDir 'settings.json'), $Settings, (New-Object System.Text.UTF8Encoding($false)))
 
     $env:CLAUDE_CONFIG_DIR   = $ConfigDir
@@ -90,7 +90,7 @@ try {
     Write-Host ''
     Write-Host "Job        : $Job"
     Write-Host "Technicien : $Technicien"
-    Write-Host 'Connectez-vous au compte Claude ORDIServices quand Claude le demande.'
+    Write-Host 'Connectez-vous au compte Claude de votre entreprise quand Claude le demande.'
     Write-Host ''
 
     Push-Location $WorkDir

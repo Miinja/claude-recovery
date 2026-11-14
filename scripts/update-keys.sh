@@ -8,6 +8,7 @@ set -euo pipefail
 LABEL="persistence"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 MNT="$(mktemp -d)"
+EDITION="${1:-entreprise}"   # édition des clés branchées
 
 [ "$(id -u)" -eq 0 ] || { echo "À lancer en root (sudo)." >&2; exit 1; }
 
@@ -19,7 +20,7 @@ for part in "${PARTS[@]}"; do
   mount "$part" "$MNT"
   dest="$MNT/home/ordi/.claude"
   mkdir -p "$dest" "$MNT/opt/ordi/hooks"
-  rsync -a "$ROOT/config/CLAUDE.md" "$ROOT/config/settings.json" "$dest/"
+  rsync -a "$ROOT/config/$EDITION/CLAUDE.md" "$ROOT/config/$EDITION/settings.json" "$dest/"
   rsync -a "$ROOT/hooks/" "$MNT/opt/ordi/hooks/"
   # L'utilisateur live « ordi » a l'uid 1000
   chown -R 1000:1000 "$MNT/home/ordi" "$MNT/opt/ordi"

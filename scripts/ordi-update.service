@@ -1,5 +1,5 @@
 [Unit]
-Description=Claude Recovery - mise a jour de la config depuis le serveur ORDIServices
+Description=Claude Recovery - mise a jour de la config (git pull)
 Wants=network-online.target
 After=network-online.target
 

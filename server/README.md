@@ -1,6 +1,6 @@
-# Serveur ORDIServices — Forgejo et récepteur de journaux
+# Serveur de l’édition entreprise — Forgejo et récepteur de journaux
 
-À déployer sur la VM Debian 13 (Docker + Caddy déjà en place).
+À déployer sur un serveur Linux avec Docker et Caddy (chez ORDIServices : la VM Debian 13).
 
 ## Installation
 

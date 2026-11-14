@@ -1,32 +1,65 @@
 # Claude Recovery
 
-Clé USB bootable de récupération de données pilotée par **Claude Code**, pour ORDIServices.
+Clé USB bootable de récupération de données pilotée par **Claude Code**.
 
-## Principe
+On démarre n'importe quel PC sur la clé ; Claude Code diagnostique le disque, le clone,
+puis récupère les fichiers (ddrescue, testdisk, photorec, smartctl…), sans jamais écrire
+sur le disque d'origine.
 
-- **Mode boot (Linux live)** : on démarre n'importe quel PC sur la clé ; Claude Code
-  diagnostique et récupère les données (ddrescue, testdisk, photorec, smartctl…).
-- **Mode Windows** : un script lancé depuis le Windows du client installe Claude Code
-  temporairement pour diagnostiquer un bug logiciel/navigateur, puis nettoie tout.
-- **Serveur ORDIServices** (support, pas de calcul) : dépôt de config (Forgejo),
-  réception des logs d'intervention, stockage des images et fichiers récupérés.
+## Deux éditions
+
+| | **Particulier** | **Entreprise** |
+|---|---|---|
+| Pour qui | Une personne qui récupère ses propres fichiers | Un technicien qui intervient pour un client |
+| Ton de Claude | Explique chaque étape, sans jargon ; dit quand il vaut mieux s'arrêter et voir un professionnel | Court et factuel |
+| Journal des commandes | Sur la clé uniquement | Sur la clé **et** envoyé au serveur de l'entreprise |
+| Rapport de fin de job | Dans le dossier de récupération | Idem, et envoyé au serveur |
+| Réglages à la création | Aucun | Nom de la clé, serveur de journaux et jeton, dépôt de mise à jour (facultatif) |
+| Mode Windows (diagnostic chez le client) | Non | Oui |
+| Mises à jour | Dépôt GitHub du projet | Dépôt GitHub, ou le dépôt (Forgejo) de l'entreprise |
+
+L'édition est fixée dans l'image. Les deux images sont publiées dans les
+[releases](https://github.com/Miinja/claude-recovery/releases).
+
+## Créer une clé
+
+### Sous Windows : l'installeur
+
+Télécharger `ClaudeRecoveryInstaller.exe` depuis la dernière release, le lancer, puis :
+
+1. choisir l'édition ;
+2. choisir la clé USB (elle est entièrement effacée) ;
+3. édition entreprise : remplir les réglages ;
+4. **Écrire la clé**. L'installeur télécharge l'image, vérifie son empreinte, l'écrit,
+   puis relit la clé pour contrôle.
+
+### Sous Linux
+
+```
+sudo scripts/make-key.sh particulier /dev/sdX
+sudo scripts/make-key.sh entreprise  /dev/sdX
+```
+
+### Premier démarrage
+
+Démarrer un PC sur la clé et taper `ordi`. La première fois, la clé propose de créer son
+espace de persistance (chiffré par une phrase de passe, si on le souhaite) : c'est lui qui
+garde la connexion au compte Claude, les réglages et les journaux d'un démarrage à l'autre.
+Un redémarrage plus tard, la clé est opérationnelle.
 
 ## Utilisation
-
-### Sur la clé (mode boot)
 
 ```
 ordi
 ```
 
-La commande met la clé à jour (`git pull`), demande le technicien, la référence du job
-et le dossier de destination, puis lance Claude Code dans le dossier du job. À la
-fermeture, les journaux en attente et `rapport.md` partent au serveur. Hors ligne, tout
-reste sur la clé et part à la prochaine session connectée.
+La commande met la clé à jour (`git pull`), prépare le dossier de travail sur le disque de
+destination, puis lance Claude Code dedans. En édition entreprise, elle demande le
+technicien et la référence du job ; à la fermeture, les journaux en attente et
+`rapport.md` partent au serveur. Hors ligne, tout reste sur la clé et part à la prochaine
+session connectée.
 
-La connexion au compte Claude est mémorisée sur la partition de persistance.
-
-### Chez le client (mode Windows)
+### Mode Windows (édition entreprise)
 
 Depuis la partition `ORDI-WIN` de la clé, dans PowerShell :
 
@@ -37,63 +70,85 @@ powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1
 Le technicien se connecte au compte Claude à chaque session. À la fermeture : déconnexion,
 rapport recopié sur la clé, suppression de tout ce que la session a ajouté au PC.
 
-### Fabriquer une clé
+## Publier une release
 
 ```
-sudo build/build-iso.sh                                             # sur une machine Debian
-sudo scripts/make-key.sh build/out/claude-recovery-AAAAMMJJ.iso /dev/sdX --luks
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-Puis, au premier démarrage de la clé : renseigner `/etc/ordi/ordi.env`
-(modèle : `config/ordi.env.example`) et lancer `ordi`.
+Le workflow `.github/workflows/release.yml` construit les deux images et l'installeur,
+puis crée la release. Les noms de fichiers sont fixes (`claude-recovery-particulier.iso`,
+`claude-recovery-entreprise.iso`, `ClaudeRecoveryInstaller.exe`) : l'installeur et
+`make-key.sh` vont toujours chercher la dernière release.
+
+Le dépôt doit être **public** pour que les clés et l'installeur y accèdent sans jeton.
 
 ## Arborescence
 
 ```
 config/
-  CLAUDE.md              Procédure suivie par Claude sur la clé (→ ~/.claude/CLAUDE.md)
-  settings.json          Permissions + hooks de la clé (→ ~/.claude/settings.json)
-  CLAUDE.windows.md      Procédure du mode Windows
-  settings.windows.json  Permissions + hooks du mode Windows
-  ordi.env.example       Réglages propres à une clé (URL du dépôt, jetons)
+  entreprise/            Procédure (CLAUDE.md), permissions et hooks, modèle de réglages
+  particulier/           Procédure et permissions de l'édition particulier
+  windows/               Procédure et permissions du mode Windows
 hooks/
   log-command.sh         Journalise chaque commande de Claude, file d'attente hors ligne
-build/
-  packages.txt           Paquets installés dans l'image live
-  build-iso.sh           Construction de l'image (Debian live-build)
-  hooks/                 Hook live-build : installation de Claude Code dans l'image
-  ca/                    (facultatif) certificat racine interne à embarquer
 scripts/
   ordi-session.sh        Lanceur de session (commande `ordi`)
+  ordi-firstboot.sh      Premier démarrage : réglages de l'installeur, persistance
   ordi-update.sh         git pull + installation de la config (commande `ordi-update`)
   ordi-update.service    Même mise à jour, au démarrage de la clé
-  make-key.sh            Écrit l'image sur une clé et crée persistance + partition Windows
+  ordi-lib.sh            Fonctions communes (édition, bloc de réglages)
+  make-key.sh            Création d'une clé depuis Linux
   update-keys.sh         Met à jour les clés branchées sur un poste, sans les démarrer
+build/
+  build-iso.sh           Construction d'une édition (Debian live-build)
+  packages.txt           Paquets de l'image
+  hooks/                 Hook live-build : installation de Claude Code dans l'image
+  ca/                    (facultatif) certificat racine interne à embarquer
+installer/
+  src/                   Installeur Windows (C#, .NET Framework livré avec Windows)
+  build.ps1              Compilation, sans SDK à installer
 windows/
   start-claude.ps1       Mode Windows : installation temporaire, session, nettoyage
   log-command.ps1        Journalisation des commandes en mode Windows
 server/
-  docker-compose.yml     Forgejo + récepteur de journaux (derrière le Caddy existant)
+  docker-compose.yml     Récepteur de journaux + Forgejo, derrière Caddy
   log-receiver/          Service HTTP de réception des journaux et rapports
-  README.md              Déploiement sur la VM Debian
+  README.md              Déploiement
+.github/workflows/
+  release.yml            Build des images et de l'installeur, publication
 ```
+
+### Comment les réglages arrivent sur la clé
+
+Windows ne sait pas créer de partition Linux. L'installeur écrit donc l'image, puis dépose
+les réglages dans un petit bloc brut juste après elle (format décrit dans
+`scripts/ordi-lib.sh`). Au premier démarrage, la clé lit ce bloc, crée sa partition de
+persistance, y range les réglages, puis efface le bloc.
 
 ## Règles de sécurité (non négociables)
 
 1. Le disque source n'est **jamais** écrit : clonage ddrescue d'abord, travail sur l'image.
-2. Claude travaille sur les **métadonnées** et n'ouvre pas le contenu des fichiers clients sans raison.
+2. Claude travaille sur les **métadonnées** et n'ouvre pas le contenu des fichiers sans raison.
 3. Commandes destructrices bloquées dans `settings.json`, et reprises en paramètres gérés
    (`/etc/claude-code/managed-settings.json`) pour qu'aucun réglage local ne les lève.
-   Ces règles sont un garde-fou, pas une barrière étanche : la présence du technicien reste la règle.
+   Ces règles sont un garde-fou, pas une barrière étanche.
 4. Aucune donnée client ni aucun jeton dans ce dépôt (voir `.gitignore`).
-5. Une clé perdue se révoque en trois endroits : `server/tokens.txt`, le jeton Forgejo de la
-   clé, la session du compte Claude. D'où l'intérêt de chiffrer la persistance (`--luks`).
+5. Une clé se met à jour depuis ce dépôt à chaque session : qui peut pousser sur `main`
+   peut modifier la procédure de toutes les clés. Protéger la branche.
+6. Une clé entreprise perdue se révoque en trois endroits : le jeton du serveur de
+   journaux, le jeton du dépôt de mise à jour, la session du compte Claude. D'où
+   l'intérêt de chiffrer la persistance.
 
 ## Statut
 
-- [x] Squelette du projet
-- [x] Procédure `CLAUDE.md` finalisée
-- [x] Hooks de traçabilité → serveur (écrits et testés en local)
-- [ ] Build de la clé (base Debian live) — scripts écrits, **jamais exécutés** : à valider sur une machine Debian
-- [ ] Mode Windows — script écrit, à valider sur un PC de test
-- [ ] Forgejo sur le serveur ORDIServices — fichiers prêts dans `server/`, à déployer sur la VM
+- [x] Procédures des deux éditions et du mode Windows
+- [x] Journalisation et envoi au serveur — testés de bout en bout en local
+- [x] Bloc de réglages installeur → clé — testé (écriture Windows, relecture Linux)
+- [x] Installeur Windows — compile ; copie, bloc et relecture testés sur fichier
+- [ ] Installeur Windows — écriture sur une vraie clé USB **jamais essayée**
+- [ ] Build des images — scripts et workflow écrits, **jamais exécutés**
+- [ ] Premier démarrage (création de la persistance) — **jamais essayé** sur une clé
+- [ ] Mode Windows — à valider sur un PC de test
+- [ ] Serveur de journaux et Forgejo — fichiers prêts dans `server/`, à déployer

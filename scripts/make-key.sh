@@ -1,31 +1,84 @@
 #!/usr/bin/env bash
-# Prépare une clé Claude Recovery : écrit l'image, puis crée
-#   - la partition de persistance (login Claude mémorisé, config, journaux en attente)
-#   - une partition exFAT « ORDI-WIN », lisible sous Windows, pour le mode Windows.
+# Prépare une clé Claude Recovery depuis Linux. Équivalent en ligne de commande de
+# l'installeur Windows (installer/) : même image, mêmes réglages, même format.
 #
-#   sudo scripts/make-key.sh build/out/claude-recovery-AAAAMMJJ.iso /dev/sdX [--luks]
+#   sudo scripts/make-key.sh entreprise  /dev/sdX     # télécharge la dernière release
+#   sudo scripts/make-key.sh particulier /dev/sdX
+#   sudo scripts/make-key.sh chemin/vers/image.iso /dev/sdX
 #
-#   --luks   chiffre la persistance (phrase de passe demandée à chaque démarrage).
-#            Recommandé : la persistance contient la session Claude et les jetons.
+# Le script écrit l'image puis, pour l'édition entreprise, dépose les réglages saisis
+# juste après elle. La partition de persistance est créée par la clé elle-même à son
+# premier démarrage (scripts/ordi-firstboot.sh).
 #
 # ATTENTION : efface entièrement la clé désignée.
 set -euo pipefail
 
-ISO="${1:-}"; DEV="${2:-}"; LUKS="${3:-}"
-PERSIST_SIZE="${PERSIST_SIZE:-16G}"   # taille de la persistance ; le reste va au mode Windows
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/ordi-lib.sh
+. "$(cd "$(dirname "$0")" && pwd)/ordi-lib.sh"
+RELEASES="https://github.com/Miinja/claude-recovery/releases/latest/download"
 
+SRC="${1:-}"; DEV="${2:-}"
 [ "$(id -u)" -eq 0 ] || { echo "À lancer en root (sudo)." >&2; exit 1; }
-[ -f "$ISO" ] && [ -b "$DEV" ] || { echo "Usage : $0 <image.iso> </dev/sdX> [--luks]" >&2; exit 1; }
-[ -z "$LUKS" ] || [ "$LUKS" = "--luks" ] || { echo "Option inconnue : $LUKS" >&2; exit 1; }
+[ -n "$SRC" ] && [ -b "$DEV" ] || { echo "Usage : $0 <entreprise|particulier|image.iso> </dev/sdX>" >&2; exit 1; }
 
-# Garde-fous : disque entier, amovible, branché en USB
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+
+# --- Image et édition ---------------------------------------------------------
+case "$SRC" in
+  entreprise|particulier)
+    EDITION="$SRC"
+    ISO="$TMP/claude-recovery-$EDITION.iso"
+    echo "→ Téléchargement de la dernière release ($EDITION)…"
+    curl -fL --progress-bar -o "$ISO" "$RELEASES/claude-recovery-$EDITION.iso"
+    curl -fsSL -o "$ISO.sha256" "$RELEASES/claude-recovery-$EDITION.iso.sha256"
+    ( cd "$TMP" && sha256sum -c --quiet "claude-recovery-$EDITION.iso.sha256" ) \
+      || { echo "Empreinte de l'image incorrecte : téléchargement abandonné." >&2; exit 1; }
+    ;;
+  *)
+    ISO="$SRC"
+    [ -f "$ISO" ] || { echo "Image introuvable : $ISO" >&2; exit 1; }
+    case "$(basename "$ISO")" in
+      *entreprise*)  EDITION=entreprise ;;
+      *particulier*) EDITION=particulier ;;
+      *) read -r -p "Édition de cette image [entreprise/particulier] : " EDITION ;;
+    esac
+    ;;
+esac
+case "$EDITION" in entreprise|particulier) ;; *) echo "Édition inconnue." >&2; exit 1 ;; esac
+
+# --- Garde-fous : disque entier, branché en USB, non monté --------------------
 [ "$(lsblk -dno TYPE "$DEV")" = "disk" ] || { echo "$DEV n'est pas un disque entier." >&2; exit 1; }
 [ "$(lsblk -dno TRAN "$DEV")" = "usb" ]  || { echo "$DEV n'est pas un périphérique USB : refus." >&2; exit 1; }
 if lsblk -no MOUNTPOINTS "$DEV" | grep -q .; then
   echo "$DEV a des partitions montées : démontez-les d'abord." >&2; exit 1
 fi
 
+# --- Réglages de l'édition entreprise -----------------------------------------
+CONF=""
+if [ "$EDITION" = "entreprise" ]; then
+  echo
+  echo "Réglages de la clé (édition entreprise). Entrée = laisser vide."
+  read -r -p "Nom de l'entreprise : " company
+  read -r -p "Nom de cette clé (ex. cle01) : " key_id
+  read -r -p "Dépôt Forgejo de la config (vide = dépôt GitHub public) : " git_url
+  read -r -p "URL du récepteur de journaux (vide = journal local seul) : " log_url
+  log_token=""
+  [ -z "$log_url" ] || { read -r -s -p "Jeton de cette clé pour les journaux : " log_token; echo; }
+  CONF="$TMP/ordi.env"
+  {
+    echo "# Écrit par make-key.sh le $(date +%F)"
+    ordi_env_line ORDI_COMPANY   "$company"
+    ordi_env_line ORDI_KEY_ID    "$key_id"
+    ordi_env_line ORDI_GIT_URL   "$git_url"
+    ordi_env_line ORDI_LOG_URL   "$log_url"
+    ordi_env_line ORDI_LOG_TOKEN "$log_token"
+    ordi_env_line ORDI_JOBS_DIR  "/mnt/jobs"
+  } > "$CONF"
+fi
+
+# --- Écriture -----------------------------------------------------------------
+echo
 echo "Clé cible :"
 lsblk -o NAME,SIZE,MODEL,SERIAL,TRAN,FSTYPE,LABEL "$DEV"
 echo
@@ -33,53 +86,16 @@ echo "TOUT le contenu de $DEV sera effacé."
 read -r -p "Pour confirmer, retapez le nom du périphérique ($DEV) : " confirm
 [ "$confirm" = "$DEV" ] || { echo "Annulé."; exit 1; }
 
-echo "→ Écriture de l'image…"
+echo "→ Écriture de l'image ($EDITION)…"
+wipefs -aq "$DEV"
 dd if="$ISO" of="$DEV" bs=4M conv=fsync status=progress
-sync; partprobe "$DEV"; sleep 2
 
-echo "→ Création des partitions : persistance (${PERSIST_SIZE}) et ORDI-WIN (reste)…"
-before="$(lsblk -lnpo NAME "$DEV" | wc -l)"
-echo ",${PERSIST_SIZE},L" | sfdisk --append --no-reread "$DEV"
-echo ',,7' | sfdisk --append --no-reread "$DEV"
-partprobe "$DEV"; sleep 2
-[ "$(lsblk -lnpo NAME "$DEV" | wc -l)" -eq $((before + 2)) ] \
-  || { echo "Création des partitions échouée." >&2; exit 1; }
-PART="$(lsblk -lnpo NAME "$DEV" | tail -n 2 | head -n 1)"
-WINPART="$(lsblk -lnpo NAME "$DEV" | tail -n 1)"
-
-# Partition lisible sous Windows : scripts du mode Windows + journaux d'intervention
-mkfs.exfat -L ORDI-WIN "$WINPART" >/dev/null
-WMNT="$(mktemp -d)"
-mount "$WINPART" "$WMNT"
-cp -r "$ROOT/windows" "$ROOT/config" "$WMNT/"
-rm -f "$WMNT/config/ordi.env"
-sync; umount "$WMNT"; rmdir "$WMNT"
-
-TARGET="$PART"
-if [ "$LUKS" = "--luks" ]; then
-  echo "→ Chiffrement LUKS de $PART (choisissez la phrase de passe de la clé)…"
-  cryptsetup luksFormat "$PART"
-  cryptsetup open "$PART" ordi-persistence
-  TARGET=/dev/mapper/ordi-persistence
+if [ -n "$CONF" ]; then
+  ordi_blob_write "$DEV" "$(ordi_blob_offset "$(stat -c %s "$ISO")")" "$CONF"
+  echo "→ Réglages déposés sur la clé."
 fi
-
-mkfs.ext4 -q -L persistence "$TARGET"
-
-MNT="$(mktemp -d)"
-mount "$TARGET" "$MNT"
-# Dossiers conservés d'un démarrage à l'autre
-cat > "$MNT/persistence.conf" <<'EOF'
-/home
-/etc/ordi
-/opt/ordi
-/var/log/ordi
-EOF
-mkdir -p "$MNT/etc/ordi"
-install -m 600 "$ROOT/config/ordi.env.example" "$MNT/etc/ordi/ordi.env"
-sync; umount "$MNT"; rmdir "$MNT"
-[ "$LUKS" = "--luks" ] && cryptsetup close ordi-persistence
+sync; partprobe "$DEV" 2>/dev/null || true
 
 echo
-echo "Clé prête. Reste à faire au premier démarrage :"
-echo "  1. sudo nano /etc/ordi/ordi.env   (nom de la clé, URL du dépôt, jeton des journaux)"
-echo "  2. ordi                            (connexion au compte Claude, mémorisée ensuite)"
+echo "Clé prête. Démarrez un PC dessus et tapez : ordi"
+echo "Au premier démarrage, la clé crée sa partition de persistance."

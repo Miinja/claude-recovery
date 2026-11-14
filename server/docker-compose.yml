@@ -1,4 +1,4 @@
-# Services Claude Recovery sur la VM Debian d'ORDIServices :
+# Services Claude Recovery sur le serveur de l'entreprise (édition entreprise) :
 #   forgejo    dépôt de config tiré par les clés (git pull à chaque session)
 #   ordi-logs  réception des journaux d'intervention et des rapports de job
 #

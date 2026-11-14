@@ -73,6 +73,9 @@ windows/journal/
 .credentials.json
 .claude.json
 
+# --- Artefacts de build de l'installeur ---
+installer/out/
+
 # --- Artefacts de build de la clé ---
 build/out/
 build/work/
