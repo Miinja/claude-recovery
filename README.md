@@ -42,7 +42,7 @@ sudo scripts/make-key.sh entreprise  /dev/sdX
 
 ### Premier démarrage
 
-Démarrer un PC sur la clé et taper `ordi`. La première fois, la clé propose de créer son
+Démarrer un PC sur la clé et taper `claude-recovery`. La première fois, la clé propose de créer son
 espace de persistance (chiffré par une phrase de passe, si on le souhaite) : c'est lui qui
 garde la connexion au compte Claude, les réglages et les journaux d'un démarrage à l'autre.
 Un redémarrage plus tard, la clé est opérationnelle.
@@ -50,7 +50,7 @@ Un redémarrage plus tard, la clé est opérationnelle.
 ## Utilisation
 
 ```
-ordi
+claude-recovery
 ```
 
 La commande met la clé à jour (`git pull`), prépare le dossier de travail sur le disque de
@@ -61,7 +61,7 @@ session connectée.
 
 ### Mode Windows (les deux éditions)
 
-Depuis la partition `ORDI-WIN` de la clé, dans PowerShell :
+Depuis la partition `CR-WINDOWS` de la clé, dans PowerShell :
 
 ```
 powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1
@@ -95,11 +95,11 @@ config/
 hooks/
   log-command.sh         Journalise chaque commande de Claude, file d'attente hors ligne
 scripts/
-  ordi-session.sh        Lanceur de session (commande `ordi`)
-  ordi-firstboot.sh      Premier démarrage : réglages de l'installeur, persistance
-  ordi-update.sh         git pull + installation de la config (commande `ordi-update`)
-  ordi-update.service    Même mise à jour, au démarrage de la clé
-  ordi-lib.sh            Fonctions communes (édition, bloc de réglages)
+  session.sh        Lanceur de session (commande `claude-recovery`)
+  firstboot.sh      Premier démarrage : réglages de l'installeur, persistance
+  update.sh         git pull + installation de la config (commande `claude-recovery-update`)
+  claude-recovery-update.service    Même mise à jour, au démarrage de la clé
+  lib.sh            Fonctions communes (édition, bloc de réglages)
   make-key.sh            Création d'une clé depuis Linux
   update-keys.sh         Met à jour les clés branchées sur un poste, sans les démarrer
 build/
@@ -125,7 +125,7 @@ server/
 
 Windows ne sait pas créer de partition Linux. L'installeur écrit donc l'image, puis dépose
 les réglages dans un petit bloc brut juste après elle (format décrit dans
-`scripts/ordi-lib.sh`). Au premier démarrage, la clé lit ce bloc, crée sa partition de
+`scripts/lib.sh`). Au premier démarrage, la clé lit ce bloc, crée sa partition de
 persistance, y range les réglages, puis efface le bloc.
 
 ## Règles de sécurité (non négociables)

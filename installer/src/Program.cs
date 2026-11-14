@@ -50,10 +50,10 @@ namespace ClaudeRecovery
                 foreach (UsbDisk d in Disks.ListUsb()) log.WriteLine("usb: " + d);
                 if (args.Length >= 3)
                 {
-                    string env = Imaging.EnvLine("ORDI_COMPANY", "L'atelier \"test\" $HOME `x`")
-                               + Imaging.EnvLine("ORDI_KEY_ID", "cle01")
-                               + Imaging.EnvLine("ORDI_LOG_URL", "https://logs.exemple.lan")
-                               + Imaging.EnvLine("ORDI_LOG_TOKEN", "0123456789abcdef0123456789abcdef");
+                    string env = Imaging.EnvLine("RECOVERY_COMPANY", "L'atelier \"test\" $HOME `x`")
+                               + Imaging.EnvLine("RECOVERY_KEY_ID", "cle01")
+                               + Imaging.EnvLine("RECOVERY_LOG_URL", "https://logs.exemple.lan")
+                               + Imaging.EnvLine("RECOVERY_LOG_TOKEN", "0123456789abcdef0123456789abcdef");
                     byte[] blob = Imaging.BuildBlob(env);
                     long length = new FileInfo(args[1]).Length;
                     using (var target = new FileStream(args[2], FileMode.Create, FileAccess.ReadWrite))

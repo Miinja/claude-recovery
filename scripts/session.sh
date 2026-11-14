@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lanceur de session Claude Recovery (commande `ordi` sur la clé).
+# Lanceur de session Claude Recovery (commande `claude-recovery` sur la clé).
 #   1. premier démarrage : réglages de l'installeur, partition de persistance
 #   2. met la clé à jour (git pull)
 #   3. prépare le dossier de travail (job) sur le support de destination
@@ -7,18 +7,18 @@
 #   5. à la fermeture, édition entreprise : envoie journaux et rapport au serveur
 set -u
 
-# shellcheck source=scripts/ordi-lib.sh
-. "$(dirname "$(readlink -f "$0")")/ordi-lib.sh"
+# shellcheck source=scripts/lib.sh
+. "$(dirname "$(readlink -f "$0")")/lib.sh"
 
-EDITION="$(ordi_edition)"
-STATE="${HOME}/.config/ordi"
+EDITION="$(cr_edition)"
+STATE="${HOME}/.config/claude-recovery"
 mkdir -p "$STATE"
 
-mountpoint -q /etc/ordi || sudo "$ORDI_REPO/scripts/ordi-firstboot.sh"
-"$ORDI_REPO/scripts/ordi-update.sh"
+mountpoint -q /etc/claude-recovery || sudo "$CR_REPO/scripts/firstboot.sh"
+"$CR_REPO/scripts/update.sh"
 
 # shellcheck disable=SC1091
-[ -r /etc/ordi/ordi.env ] && . /etc/ordi/ordi.env
+[ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
 
 echo
 echo "=== Claude Recovery — édition $EDITION ==="
@@ -41,7 +41,7 @@ fi
 ref="$(printf '%s' "$ref" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//; s/-*$//' | cut -c1-48)"
 [ -n "$ref" ] || { echo "Référence obligatoire."; exit 1; }
 
-jobs_dir="${ORDI_JOBS_DIR:-/mnt/jobs}"
+jobs_dir="${RECOVERY_JOBS_DIR:-/mnt/jobs}"
 if [ "$EDITION" = "particulier" ] && ! mountpoint -q "$jobs_dir"; then
   echo
   echo "Disques et partitions détectés :"
@@ -89,11 +89,11 @@ else
   echo "Nouveau dossier : $job_dir"
 fi
 
-export ORDI_EDITION="$EDITION"
-export ORDI_COMPANY="${ORDI_COMPANY:-}"
-export ORDI_TECH="$tech"
-export ORDI_JOB="${job_dir##*/}"
-export ORDI_JOB_DIR="$job_dir"
+export RECOVERY_EDITION="$EDITION"
+export RECOVERY_COMPANY="${RECOVERY_COMPANY:-}"
+export RECOVERY_TECH="$tech"
+export RECOVERY_JOB="${job_dir##*/}"
+export RECOVERY_JOB_DIR="$job_dir"
 
 echo
 df -h "$job_dir" | sed 's/^/  /'
@@ -106,21 +106,21 @@ status=$?
 # --- Clôture -----------------------------------------------------------------
 [ "$EDITION" = "entreprise" ] || exit "$status"
 
-/opt/ordi/hooks/log-command.sh --flush
+/opt/claude-recovery/hooks/log-command.sh --flush
 
-if [ -n "${ORDI_LOG_URL:-}" ] && [ -s "$job_dir/rapport.md" ]; then
+if [ -n "${RECOVERY_LOG_URL:-}" ] && [ -s "$job_dir/rapport.md" ]; then
   code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X PUT \
-    -H "Authorization: Bearer ${ORDI_LOG_TOKEN:-}" \
+    -H "Authorization: Bearer ${RECOVERY_LOG_TOKEN:-}" \
     -H 'Content-Type: text/markdown; charset=utf-8' \
     --data-binary @"$job_dir/rapport.md" \
-    "${ORDI_LOG_URL%/}/api/jobs/$ORDI_JOB/rapport" 2>/dev/null)" || code=000
+    "${RECOVERY_LOG_URL%/}/api/jobs/$RECOVERY_JOB/rapport" 2>/dev/null)" || code=000
   case "$code" in
     2*) echo "Rapport envoyé au serveur." ;;
     *)  echo "Rapport NON envoyé (HTTP $code) : il reste dans $job_dir/rapport.md." ;;
   esac
 fi
 
-if [ -s "${ORDI_LOG_DIR:-/var/log/ordi}/queue.jsonl" ] || [ -s "${ORDI_LOG_DIR:-/var/log/ordi}/queue.sending" ]; then
+if [ -s "${RECOVERY_LOG_DIR:-/var/log/claude-recovery}/queue.jsonl" ] || [ -s "${RECOVERY_LOG_DIR:-/var/log/claude-recovery}/queue.sending" ]; then
   echo "Des journaux attendent encore sur la clé : ils partiront à la prochaine session connectée."
 fi
 exit "$status"

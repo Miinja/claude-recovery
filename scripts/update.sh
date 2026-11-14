@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 # Met la clé à jour : git pull du dépôt de config, puis installation de la procédure,
 # des permissions et des hooks de l'édition de la clé. Lancé au début de chaque session
-# par `ordi` (et au démarrage par ordi-update.service). Hors ligne, la config locale
+# par `claude-recovery` (et au démarrage par claude-recovery-update.service). Hors ligne, la config locale
 # est gardée.
 #
-# Source des mises à jour : ORDI_GIT_URL (le Forgejo de l'entreprise) s'il est défini
-# dans /etc/ordi/ordi.env, sinon le dépôt GitHub public du projet.
+# Source des mises à jour : RECOVERY_GIT_URL (le Forgejo de l'entreprise) s'il est défini
+# dans /etc/claude-recovery/config.env, sinon le dépôt GitHub public du projet.
 set -u
 
-# shellcheck source=scripts/ordi-lib.sh
-. "$(dirname "$(readlink -f "$0")")/ordi-lib.sh"
+# shellcheck source=scripts/lib.sh
+. "$(dirname "$(readlink -f "$0")")/lib.sh"
 # shellcheck disable=SC1091
-[ -r /etc/ordi/ordi.env ] && . /etc/ordi/ordi.env
+[ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
 
-EDITION="$(ordi_edition)"
+EDITION="$(cr_edition)"
 CLAUDE_DIR="${HOME}/.claude"
-GIT_URL="${ORDI_GIT_URL:-$ORDI_DEFAULT_GIT_URL}"
+GIT_URL="${RECOVERY_GIT_URL:-$CR_DEFAULT_GIT_URL}"
 
-cd "$ORDI_REPO" || { echo "ordi-update : dépôt introuvable ($ORDI_REPO)" >&2; exit 1; }
+cd "$CR_REPO" || { echo "claude-recovery-update : dépôt introuvable ($CR_REPO)" >&2; exit 1; }
 
 git remote set-url origin "$GIT_URL" 2>/dev/null || git remote add origin "$GIT_URL"
 if GIT_TERMINAL_PROMPT=0 timeout 30 git pull --ff-only --quiet origin main 2>/dev/null; then
@@ -28,9 +28,9 @@ else
 fi
 
 # Installation de la config de l'édition dans le profil
-mkdir -p "$CLAUDE_DIR" /opt/ordi/hooks
+mkdir -p "$CLAUDE_DIR" /opt/claude-recovery/hooks
 install -m 644 "config/$EDITION/CLAUDE.md" "config/$EDITION/settings.json" "$CLAUDE_DIR/"
-install -m 755 hooks/*.sh /opt/ordi/hooks/
+install -m 755 hooks/*.sh /opt/claude-recovery/hooks/
 
 # Les interdictions sont aussi posées en paramètres gérés : elles priment sur tout
 # réglage local et ne peuvent pas être levées pendant une session.

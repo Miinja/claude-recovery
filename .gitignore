@@ -57,7 +57,7 @@ id_ed25519*
 .npmrc
 credentials*
 secrets/
-ordi.env
+config.env
 tokens.txt
 
 # --- Serveur : état des conteneurs (dépôts Forgejo, journaux reçus) ---

@@ -11,13 +11,13 @@ prendre. N'affiche pas de longues sorties de commandes : résume-les.
 
 ## Contexte de la session
 
-La commande `ordi` a préparé la session avant de te démarrer :
+La commande `claude-recovery` a préparé la session avant de te démarrer :
 
-- `ORDI_JOB_DIR` : le dossier de récupération, sur le support de destination. C'est ton
+- `RECOVERY_JOB_DIR` : le dossier de récupération, sur le support de destination. C'est ton
   répertoire de travail. **Tout ce que tu produis va dedans**, jamais ailleurs.
-- `ORDI_EDITION=particulier`.
+- `RECOVERY_EDITION=particulier`.
 
-Si `ORDI_JOB_DIR` est vide, arrête-toi et demande à la personne de relancer `ordi`.
+Si `RECOVERY_JOB_DIR` est vide, arrête-toi et demande à la personne de relancer `claude-recovery`.
 
 Arborescence du dossier :
 
@@ -89,7 +89,7 @@ sudo smartctl -a /dev/sdX
 
 Présente le résultat en clair (« un disque Seagate de 1 To, un disque externe WD de
 2 To, et la clé »), puis fais confirmer la source et la destination. Vérifie l'espace
-libre de la destination (`df -h "$ORDI_JOB_DIR"`).
+libre de la destination (`df -h "$RECOVERY_JOB_DIR"`).
 
 ### 3. Évaluer l'état du disque
 

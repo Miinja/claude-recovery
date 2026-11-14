@@ -1,6 +1,6 @@
 # Serveur de l’édition entreprise — Forgejo et récepteur de journaux
 
-À déployer sur un serveur Linux avec Docker et Caddy (chez ORDIServices : la VM Debian 13).
+À déployer sur un serveur Linux avec Docker et Caddy .
 
 ## Installation
 
@@ -15,7 +15,7 @@ chmod 600 .env tokens.txt
 
 mkdir -p data/forgejo data/logs
 sudo chown 1000:1000 data/forgejo
-sudo chown 10001 data/logs      # utilisateur du conteneur ordi-logs
+sudo chown 10001 data/logs      # utilisateur du conteneur log-receiver
 
 docker compose up -d --build
 ```
@@ -28,19 +28,19 @@ L'inscription publique est fermée. Créer le compte administrateur en ligne de 
 
 ```bash
 docker compose exec -u git forgejo forgejo admin user create \
-  --admin --username ordi-admin --email admin@exemple.lan --random-password
+  --admin --username admin --email admin@exemple.lan --random-password
 ```
 
 Puis, dans l'interface (`https://<GIT_DOMAIN>`) :
 
-1. Créer l'organisation `ordi` et le dépôt privé `claude-recovery`.
+1. Créer l'organisation `claude-recovery` et le dépôt privé `claude-recovery`.
 2. Créer un compte par clé (`cle01`, …) en **lecture seule** sur ce dépôt, et un jeton
-   d'accès (droit `read:repository`) pour chacun. Ce jeton va dans `ORDI_GIT_URL`
-   sur la clé (`/etc/ordi/ordi.env`).
+   d'accès (droit `read:repository`) pour chacun. Ce jeton va dans `RECOVERY_GIT_URL`
+   sur la clé (`/etc/claude-recovery/config.env`).
 3. Depuis le poste de développement, pousser le dépôt :
 
 ```bash
-git remote add forgejo https://<GIT_DOMAIN>/ordi/claude-recovery.git
+git remote add forgejo https://<GIT_DOMAIN>/atelier/claude-recovery.git
 git push forgejo main
 ```
 

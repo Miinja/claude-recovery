@@ -1,6 +1,6 @@
 # Services Claude Recovery sur le serveur de l'entreprise (édition entreprise) :
 #   forgejo    dépôt de config tiré par les clés (git pull à chaque session)
-#   ordi-logs  réception des journaux d'intervention et des rapports de job
+#   log-receiver  réception des journaux d'intervention et des rapports de job
 #
 # Aucun port n'est publié : Caddy (déjà en place) joint les deux services par le
 # réseau Docker ${CADDY_NETWORK}. Voir README.md et Caddyfile.snippet.
@@ -25,9 +25,9 @@ services:
       - /etc/localtime:/etc/localtime:ro
     networks: [proxy]
 
-  ordi-logs:
+  log-receiver:
     build: ./log-receiver
-    container_name: ordi-logs
+    container_name: log-receiver
     restart: unless-stopped
     environment:
       TZ: Europe/Paris

@@ -18,9 +18,9 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-DATA = Path(os.environ.get("ORDI_DATA_DIR", "/data"))
-TOKENS_FILE = Path(os.environ.get("ORDI_TOKENS_FILE", "/config/tokens.txt"))
-PORT = int(os.environ.get("ORDI_PORT", "8080"))
+DATA = Path(os.environ.get("RECEIVER_DATA_DIR", "/data"))
+TOKENS_FILE = Path(os.environ.get("RECEIVER_TOKENS_FILE", "/config/tokens.txt"))
+PORT = int(os.environ.get("RECEIVER_PORT", "8080"))
 MAX_LOG_BYTES = 4 * 1024 * 1024
 MAX_REPORT_BYTES = 5 * 1024 * 1024
 MIN_TOKEN_LEN = 24
@@ -54,7 +54,7 @@ def job_name(value):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "ordi-logs/1"
+    server_version = "log-receiver/1"
 
     def reply(self, code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -158,5 +158,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     DATA.mkdir(parents=True, exist_ok=True)
-    print(f"ordi-logs : écoute sur :{PORT}, données dans {DATA}", flush=True)
+    print(f"log-receiver : écoute sur :{PORT}, données dans {DATA}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

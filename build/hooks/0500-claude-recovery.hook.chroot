@@ -1,10 +1,10 @@
 #!/bin/sh
 # Hook live-build, exécuté dans le chroot de l'image.
-# Installe Claude Code pour tous les utilisateurs et prépare /opt/ordi.
+# Installe Claude Code pour tous les utilisateurs et prépare /opt/claude-recovery.
 set -e
 
-REPO=/opt/ordi/claude-recovery
-EDITION="$(cat /usr/share/ordi/edition)"
+REPO=/opt/claude-recovery/repo
+EDITION="$(cat /usr/share/claude-recovery/edition)"
 
 # Autorités de certification internes copiées par build-iso.sh (build/ca/*.crt)
 update-ca-certificates
@@ -20,27 +20,27 @@ ln -sf /opt/claude/.local/bin/claude /usr/local/bin/claude
 /usr/local/bin/claude --version
 
 # --- Arborescence de la clé ---------------------------------------------------
-mkdir -p /opt/ordi/hooks /var/log/ordi /etc/ordi /etc/claude-code /mnt/jobs
+mkdir -p /opt/claude-recovery/hooks /var/log/claude-recovery /etc/claude-recovery /etc/claude-code /mnt/jobs
 chmod 755 "$REPO"/scripts/*.sh "$REPO"/hooks/*.sh
-install -m 755 "$REPO"/hooks/*.sh /opt/ordi/hooks/
-ln -sf "$REPO/scripts/ordi-session.sh" /usr/local/bin/ordi
-ln -sf "$REPO/scripts/ordi-update.sh"  /usr/local/bin/ordi-update
+install -m 755 "$REPO"/hooks/*.sh /opt/claude-recovery/hooks/
+ln -sf "$REPO/scripts/session.sh" /usr/local/bin/claude-recovery
+ln -sf "$REPO/scripts/update.sh"  /usr/local/bin/claude-recovery-update
 
 # Interdictions en paramètres gérés dès le premier démarrage (avant tout git pull)
 jq '{permissions: {deny: .permissions.deny}}' \
   "$REPO/config/$EDITION/settings.json" > /etc/claude-code/managed-settings.json
 
-# L'utilisateur live (uid 1000, créé au démarrage par live-config) possède /opt/ordi
-chown -R 1000:1000 /opt/ordi /var/log/ordi /mnt/jobs
+# L'utilisateur live (uid 1000, créé au démarrage par live-config) possède /opt/claude-recovery
+chown -R 1000:1000 /opt/claude-recovery /var/log/claude-recovery /mnt/jobs
 
 # --- Mise à jour au démarrage ------------------------------------------------
-install -m 644 "$REPO/scripts/ordi-update.service" /etc/systemd/system/
-systemctl enable ordi-update.service
+install -m 644 "$REPO/scripts/claude-recovery-update.service" /etc/systemd/system/
+systemctl enable claude-recovery-update.service
 
 # Message d'accueil
 cat > /etc/motd <<EOF
 
-  Claude Recovery — édition $EDITION ($(cat /usr/share/ordi/version))
-  Tapez  ordi  pour commencer.
+  Claude Recovery — édition $EDITION ($(cat /usr/share/claude-recovery/version))
+  Tapez  claude-recovery  pour commencer.
 
 EOF

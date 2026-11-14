@@ -48,7 +48,7 @@ if (-not $Job) { Write-Host 'Reference obligatoire.'; exit 1 }
 $Job = '{0}_{1}' -f (Get-Date -Format 'yyyy-MM-dd'), $Job
 
 # --- Dossiers ---------------------------------------------------------------
-$Session   = Join-Path $env:TEMP ('ordi-claude-' + [guid]::NewGuid().ToString('N'))
+$Session   = Join-Path $env:TEMP ('claude-recovery-' + [guid]::NewGuid().ToString('N'))
 $ConfigDir = Join-Path $Session 'config'
 $WorkDir   = Join-Path $Session 'travail'
 $Journal   = Join-Path $PSScriptRoot 'journal'
@@ -98,9 +98,9 @@ try {
 
     $env:CLAUDE_CONFIG_DIR   = $ConfigDir
     $env:DISABLE_AUTOUPDATER = '1'
-    $env:ORDI_TECH    = $Technicien
-    $env:ORDI_JOB     = $Job
-    $env:ORDI_JOURNAL = Join-Path $Journal ($Job + '.jsonl')
+    $env:RECOVERY_TECH    = $Technicien
+    $env:RECOVERY_JOB     = $Job
+    $env:RECOVERY_JOURNAL = Join-Path $Journal ($Job + '.jsonl')
 
     Write-Host ''
     Write-Host "Job        : $Job"
@@ -158,7 +158,7 @@ finally {
         }
     }
 
-    Remove-Item Env:CLAUDE_CONFIG_DIR, Env:ORDI_TECH, Env:ORDI_JOB, Env:ORDI_JOURNAL, Env:DISABLE_AUTOUPDATER -ErrorAction SilentlyContinue
+    Remove-Item Env:CLAUDE_CONFIG_DIR, Env:RECOVERY_TECH, Env:RECOVERY_JOB, Env:RECOVERY_JOURNAL, Env:DISABLE_AUTOUPDATER -ErrorAction SilentlyContinue
 
     if ($Problems.Count -gt 0) {
         Write-Host 'ATTENTION : elements non supprimes, a retirer a la main :' -ForegroundColor Red

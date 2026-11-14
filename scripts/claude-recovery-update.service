@@ -5,9 +5,9 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-User=ordi
-Environment=HOME=/home/ordi
-ExecStart=/opt/ordi/claude-recovery/scripts/ordi-update.sh
+User=recovery
+Environment=HOME=/home/recovery
+ExecStart=/opt/claude-recovery/repo/scripts/update.sh
 TimeoutStartSec=60
 
 [Install]

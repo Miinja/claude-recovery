@@ -8,13 +8,13 @@
 #
 # Le script écrit l'image puis, pour l'édition entreprise, dépose les réglages saisis
 # juste après elle. La partition de persistance est créée par la clé elle-même à son
-# premier démarrage (scripts/ordi-firstboot.sh).
+# premier démarrage (scripts/firstboot.sh).
 #
 # ATTENTION : efface entièrement la clé désignée.
 set -euo pipefail
 
-# shellcheck source=scripts/ordi-lib.sh
-. "$(cd "$(dirname "$0")" && pwd)/ordi-lib.sh"
+# shellcheck source=scripts/lib.sh
+. "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 RELEASES="https://github.com/Miinja/claude-recovery/releases/latest/download"
 
 SRC="${1:-}"; DEV="${2:-}"
@@ -65,15 +65,15 @@ if [ "$EDITION" = "entreprise" ]; then
   read -r -p "URL du récepteur de journaux (vide = journal local seul) : " log_url
   log_token=""
   [ -z "$log_url" ] || { read -r -s -p "Jeton de cette clé pour les journaux : " log_token; echo; }
-  CONF="$TMP/ordi.env"
+  CONF="$TMP/config.env"
   {
     echo "# Écrit par make-key.sh le $(date +%F)"
-    ordi_env_line ORDI_COMPANY   "$company"
-    ordi_env_line ORDI_KEY_ID    "$key_id"
-    ordi_env_line ORDI_GIT_URL   "$git_url"
-    ordi_env_line ORDI_LOG_URL   "$log_url"
-    ordi_env_line ORDI_LOG_TOKEN "$log_token"
-    ordi_env_line ORDI_JOBS_DIR  "/mnt/jobs"
+    cr_env_line RECOVERY_COMPANY   "$company"
+    cr_env_line RECOVERY_KEY_ID    "$key_id"
+    cr_env_line RECOVERY_GIT_URL   "$git_url"
+    cr_env_line RECOVERY_LOG_URL   "$log_url"
+    cr_env_line RECOVERY_LOG_TOKEN "$log_token"
+    cr_env_line RECOVERY_JOBS_DIR  "/mnt/jobs"
   } > "$CONF"
 fi
 
@@ -91,11 +91,11 @@ wipefs -aq "$DEV"
 dd if="$ISO" of="$DEV" bs=4M conv=fsync status=progress
 
 if [ -n "$CONF" ]; then
-  ordi_blob_write "$DEV" "$(ordi_blob_offset "$(stat -c %s "$ISO")")" "$CONF"
+  cr_blob_write "$DEV" "$(cr_blob_offset "$(stat -c %s "$ISO")")" "$CONF"
   echo "→ Réglages déposés sur la clé."
 fi
 sync; partprobe "$DEV" 2>/dev/null || true
 
 echo
-echo "Clé prête. Démarrez un PC dessus et tapez : ordi"
+echo "Clé prête. Démarrez un PC dessus et tapez : claude-recovery"
 echo "Au premier démarrage, la clé crée sa partition de persistance."

@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # Premier démarrage d'une clé : lit les réglages déposés par l'installeur, puis crée
 # sur la clé elle-même la partition de persistance (connexion Claude mémorisée,
-# réglages, journaux) et la partition « ORDI-WIN » du mode Windows.
+# réglages, journaux) et la partition « CR-WINDOWS » du mode Windows.
 #
-# Lancé par `ordi` (via sudo) tant que la persistance n'est pas active. Ne touche
+# Lancé par `claude-recovery` (via sudo) tant que la persistance n'est pas active. Ne touche
 # qu'à la clé sur laquelle le système a démarré, et seulement à son espace libre.
 set -u
 
-# shellcheck source=scripts/ordi-lib.sh
-. "$(dirname "$(readlink -f "$0")")/ordi-lib.sh"
+# shellcheck source=scripts/lib.sh
+. "$(dirname "$(readlink -f "$0")")/lib.sh"
 
-[ "$(id -u)" -eq 0 ] || { echo "ordi-firstboot : à lancer en root." >&2; exit 1; }
+[ "$(id -u)" -eq 0 ] || { echo "firstboot : à lancer en root." >&2; exit 1; }
 
 # Persistance déjà active : rien à faire.
-mountpoint -q /etc/ordi && exit 0
+mountpoint -q /etc/claude-recovery && exit 0
 
-EDITION="$(ordi_edition)"
+EDITION="$(cr_edition)"
 PERSIST_SIZE_MIB="${PERSIST_SIZE_MIB:-16384}"
 
 # --- Clé de démarrage ---------------------------------------------------------
@@ -30,12 +30,12 @@ fi
 
 # --- Réglages déposés par l'installeur ----------------------------------------
 ISO_BYTES="$(isosize "$DISK" 2>/dev/null || echo 0)"
-BLOB_OFF="$(ordi_blob_find "$DISK" "$ISO_BYTES" || true)"
+BLOB_OFF="$(cr_blob_find "$DISK" "$ISO_BYTES" || true)"
 CONF=""
 if [ -n "$BLOB_OFF" ]; then
   CONF="$(mktemp)"
-  if ordi_blob_read "$DISK" "$BLOB_OFF" > "$CONF"; then
-    install -D -m 600 "$CONF" /etc/ordi/ordi.env
+  if cr_blob_read "$DISK" "$BLOB_OFF" > "$CONF"; then
+    install -D -m 600 "$CONF" /etc/claude-recovery/config.env
     echo "Réglages de l'installeur appliqués."
   else
     echo "Réglages de l'installeur illisibles : ils sont ignorés."
@@ -87,7 +87,7 @@ read -r -p "Chiffrer la persistance par une phrase de passe (recommandé) ? [O/n
 LUKS=1; case "$answer" in n|N) LUKS=0 ;; esac
 
 # Le bloc de réglages contient des jetons : on l'efface avant tout.
-[ -n "$BLOB_OFF" ] && ordi_blob_erase "$DISK" "$BLOB_OFF"
+[ -n "$BLOB_OFF" ] && cr_blob_erase "$DISK" "$BLOB_OFF"
 
 before="$(lsblk -lnpo NAME "$DISK" | wc -l)"
 {
@@ -98,7 +98,7 @@ partx -u "$DISK" 2>/dev/null || partprobe "$DISK" 2>/dev/null || true
 sleep 2
 expected=$(( before + 1 )); [ "$WIN_MIB" -gt 0 ] && expected=$(( before + 2 ))
 if [ "$(lsblk -lnpo NAME "$DISK" | wc -l)" -ne "$expected" ]; then
-  echo "Les nouvelles partitions ne sont pas visibles. Redémarrez la clé, puis relancez ordi."
+  echo "Les nouvelles partitions ne sont pas visibles. Redémarrez la clé, puis relancez claude-recovery."
   exit 0
 fi
 if [ "$WIN_MIB" -gt 0 ]; then
@@ -114,8 +114,8 @@ if [ "$LUKS" = 1 ]; then
   echo "Choisissez la phrase de passe de la clé (demandée à chaque démarrage) :"
   until cryptsetup luksFormat --batch-mode --verify-passphrase "$PART"; do :; done
   echo "Saisissez-la à nouveau pour ouvrir la partition :"
-  until cryptsetup open "$PART" ordi-persistence; do :; done
-  TARGET=/dev/mapper/ordi-persistence
+  until cryptsetup open "$PART" cr-persistence; do :; done
+  TARGET=/dev/mapper/cr-persistence
 fi
 mkfs.ext4 -q -L persistence "$TARGET"
 
@@ -123,27 +123,27 @@ MNT="$(mktemp -d)"
 mount "$TARGET" "$MNT"
 cat > "$MNT/persistence.conf" <<'EOF'
 /home
-/etc/ordi
-/opt/ordi
-/var/log/ordi
+/etc/claude-recovery
+/opt/claude-recovery
+/var/log/claude-recovery
 EOF
 if [ -n "$CONF" ]; then
-  install -D -m 600 "$CONF" "$MNT/etc/ordi/ordi.env"
+  install -D -m 600 "$CONF" "$MNT/etc/claude-recovery/config.env"
   rm -f "$CONF"
 fi
 sync; umount "$MNT"; rmdir "$MNT"
-[ "$LUKS" = 1 ] && cryptsetup close ordi-persistence
+[ "$LUKS" = 1 ] && cryptsetup close cr-persistence
 
 if [ -n "$WINPART" ]; then
-  mkfs.exfat -L ORDI-WIN "$WINPART" >/dev/null
+  mkfs.exfat -L CR-WINDOWS "$WINPART" >/dev/null
   WMNT="$(mktemp -d)"
   mount "$WINPART" "$WMNT"
   mkdir -p "$WMNT/config"
-  cp -r "$ORDI_REPO/windows" "$WMNT/"
-  cp -r "$ORDI_REPO/config/windows" "$WMNT/config/"
+  cp -r "$CR_REPO/windows" "$WMNT/"
+  cp -r "$CR_REPO/config/windows" "$WMNT/config/"
   echo "$EDITION" > "$WMNT/windows/edition.txt"
   sync; umount "$WMNT"; rmdir "$WMNT"
-  echo "Partition ORDI-WIN créée (mode Windows)."
+  echo "Partition CR-WINDOWS créée (mode Windows)."
 fi
 
 echo

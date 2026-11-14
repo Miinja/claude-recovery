@@ -18,12 +18,12 @@ mapfile -t PARTS < <(blkid -t LABEL="$LABEL" -o device || true)
 for part in "${PARTS[@]}"; do
   echo "→ Mise à jour de $part"
   mount "$part" "$MNT"
-  dest="$MNT/home/ordi/.claude"
-  mkdir -p "$dest" "$MNT/opt/ordi/hooks"
+  dest="$MNT/home/recovery/.claude"
+  mkdir -p "$dest" "$MNT/opt/claude-recovery/hooks"
   rsync -a "$ROOT/config/$EDITION/CLAUDE.md" "$ROOT/config/$EDITION/settings.json" "$dest/"
-  rsync -a "$ROOT/hooks/" "$MNT/opt/ordi/hooks/"
-  # L'utilisateur live « ordi » a l'uid 1000
-  chown -R 1000:1000 "$MNT/home/ordi" "$MNT/opt/ordi"
+  rsync -a "$ROOT/hooks/" "$MNT/opt/claude-recovery/hooks/"
+  # L'utilisateur live « recovery » a l'uid 1000
+  chown -R 1000:1000 "$MNT/home/recovery" "$MNT/opt/claude-recovery"
   sync && umount "$MNT"
 done
 

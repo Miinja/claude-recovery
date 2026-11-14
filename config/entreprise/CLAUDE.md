@@ -9,14 +9,14 @@ dis ce que tu vas faire et pourquoi.
 
 ## Contexte de la session
 
-Le lanceur `ordi` a préparé la session avant de te démarrer :
+Le lanceur `claude-recovery` a préparé la session avant de te démarrer :
 
-- `ORDI_TECH` : nom du technicien.
-- `ORDI_JOB` : référence du job (ex. `2026-11-14_dupont-hdd`).
-- `ORDI_JOB_DIR` : dossier du job, sur le support de destination. C'est ton répertoire de
+- `RECOVERY_TECH` : nom du technicien.
+- `RECOVERY_JOB` : référence du job (ex. `2026-11-14_dupont-hdd`).
+- `RECOVERY_JOB_DIR` : dossier du job, sur le support de destination. C'est ton répertoire de
   travail. **Tout ce que tu produis va dedans**, jamais ailleurs.
 
-Si l'une de ces variables est vide, arrête-toi et demande au technicien de relancer `ordi`.
+Si l'une de ces variables est vide, arrête-toi et demande au technicien de relancer `claude-recovery`.
 
 Arborescence du dossier de job :
 
@@ -67,7 +67,7 @@ sudo smartctl -a /dev/sdX        # ou : sudo nvme smart-log /dev/nvmeXn1
 
 Fais confirmer par le technicien : quel disque est la source (numéro de série), quel
 support est la destination. Vérifie que la destination a plus d'espace libre que la taille
-du disque source (`df -h "$ORDI_JOB_DIR"`). Sinon, arrête-toi.
+du disque source (`df -h "$RECOVERY_JOB_DIR"`). Sinon, arrête-toi.
 
 ### 2. Évaluer l'état du disque
 

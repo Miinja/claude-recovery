@@ -142,7 +142,7 @@ namespace ClaudeRecovery
             });
         }
 
-        /// <summary>Texte de /etc/ordi/ordi.env, ou null si les reglages sont invalides.</summary>
+        /// <summary>Texte de /etc/claude-recovery/config.env, ou null si les reglages sont invalides.</summary>
         string BuildEnv()
         {
             string company = tbCompany.Text.Trim(), key = tbKeyId.Text.Trim();
@@ -162,12 +162,12 @@ namespace ClaudeRecovery
                 return null;
             }
             return "# Ecrit par l'installeur Claude Recovery " + BuildInfo.Version + " le " + DateTime.Now.ToString("yyyy-MM-dd") + "\n"
-                + Imaging.EnvLine("ORDI_COMPANY", company)
-                + Imaging.EnvLine("ORDI_KEY_ID", key)
-                + Imaging.EnvLine("ORDI_GIT_URL", git)
-                + Imaging.EnvLine("ORDI_LOG_URL", logUrl)
-                + Imaging.EnvLine("ORDI_LOG_TOKEN", token)
-                + Imaging.EnvLine("ORDI_JOBS_DIR", "/mnt/jobs");
+                + Imaging.EnvLine("RECOVERY_COMPANY", company)
+                + Imaging.EnvLine("RECOVERY_KEY_ID", key)
+                + Imaging.EnvLine("RECOVERY_GIT_URL", git)
+                + Imaging.EnvLine("RECOVERY_LOG_URL", logUrl)
+                + Imaging.EnvLine("RECOVERY_LOG_TOKEN", token)
+                + Imaging.EnvLine("RECOVERY_JOBS_DIR", "/mnt/jobs");
         }
 
         async Task WriteKey()
@@ -218,7 +218,7 @@ namespace ClaudeRecovery
                 bar.Value = bar.Maximum;
                 SetStatus("Clé prête.");
                 MessageBox.Show(this,
-                    "La clé est prête.\n\nDémarrez un PC dessus, puis tapez :  ordi\n\nAu premier démarrage, la clé crée son espace de persistance et vous demande de vous connecter à votre compte Claude.",
+                    "La clé est prête.\n\nDémarrez un PC dessus, puis tapez :  claude-recovery\n\nAu premier démarrage, la clé crée son espace de persistance et vous demande de vous connecter à votre compte Claude.",
                     "Terminé", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception e)

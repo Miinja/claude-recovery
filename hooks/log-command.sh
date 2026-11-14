@@ -11,11 +11,11 @@
 set -u
 
 # shellcheck disable=SC1091
-[ -r /etc/ordi/ordi.env ] && . /etc/ordi/ordi.env
+[ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
 
-LOG_DIR="${ORDI_LOG_DIR:-/var/log/ordi}"
-SERVER_URL="${ORDI_LOG_URL:-}"
-TOKEN="${ORDI_LOG_TOKEN:-}"
+LOG_DIR="${RECOVERY_LOG_DIR:-/var/log/claude-recovery}"
+SERVER_URL="${RECOVERY_LOG_URL:-}"
+TOKEN="${RECOVERY_LOG_TOKEN:-}"
 QUEUE="$LOG_DIR/queue.jsonl"        # entrées pas encore prises en charge
 SENDING="$LOG_DIR/queue.sending"    # lot en cours d'envoi
 
@@ -52,9 +52,9 @@ fi
 payload="$(cat)"
 entry="$(jq -c \
   --arg ts "$(date -Iseconds)" \
-  --arg tech "${ORDI_TECH:-inconnu}" \
-  --arg job "${ORDI_JOB:-sans-job}" \
-  --arg key "${ORDI_KEY_ID:-}" \
+  --arg tech "${RECOVERY_TECH:-inconnu}" \
+  --arg job "${RECOVERY_JOB:-sans-job}" \
+  --arg key "${RECOVERY_KEY_ID:-}" \
   --arg host "$(hostname)" \
   '{ts: $ts, tech: $tech, job: $job, key: $key, host: $host,
     session: .session_id, cwd: .cwd, tool: .tool_name,

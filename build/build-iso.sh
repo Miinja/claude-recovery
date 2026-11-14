@@ -44,21 +44,21 @@ lb config \
   --debian-installer none \
   --iso-application "Claude Recovery ($EDITION)" \
   --iso-volume "CLAUDE_RECOVERY" \
-  --bootappend-live "boot=live components persistence persistence-encryption=none,luks username=ordi hostname=claude-recovery locales=fr_FR.UTF-8 keyboard-layouts=fr timezone=Europe/Paris"
+  --bootappend-live "boot=live components persistence persistence-encryption=none,luks username=recovery hostname=claude-recovery locales=fr_FR.UTF-8 keyboard-layouts=fr timezone=Europe/Paris"
 
 # Paquets
 grep -vE '^\s*(#|$)' "$HERE/packages.txt" > config/package-lists/recovery.list.chroot
 
-# Dépôt embarqué : `ordi-update` fera ensuite un git pull à chaque session
-mkdir -p config/includes.chroot/opt/ordi
-rm -rf config/includes.chroot/opt/ordi/claude-recovery
-git clone --quiet "$ROOT" config/includes.chroot/opt/ordi/claude-recovery
-git -C config/includes.chroot/opt/ordi/claude-recovery remote remove origin
+# Dépôt embarqué : `claude-recovery-update` fera ensuite un git pull à chaque session
+mkdir -p config/includes.chroot/opt/claude-recovery
+rm -rf config/includes.chroot/opt/claude-recovery/repo
+git clone --quiet "$ROOT" config/includes.chroot/opt/claude-recovery/repo
+git -C config/includes.chroot/opt/claude-recovery/repo remote remove origin
 
 # Édition et version de l'image
-mkdir -p config/includes.chroot/usr/share/ordi
-echo "$EDITION" > config/includes.chroot/usr/share/ordi/edition
-echo "$VERSION" > config/includes.chroot/usr/share/ordi/version
+mkdir -p config/includes.chroot/usr/share/claude-recovery
+echo "$EDITION" > config/includes.chroot/usr/share/claude-recovery/edition
+echo "$VERSION" > config/includes.chroot/usr/share/claude-recovery/version
 
 # Config Claude de l'édition dans le profil (repris de /etc/skel au premier démarrage)
 mkdir -p config/includes.chroot/etc/skel/.claude

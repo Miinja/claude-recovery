@@ -13,7 +13,7 @@ namespace ClaudeRecovery
         public const int Chunk = 4 * 1024 * 1024;
         public const int BlobArea = 1024 * 1024;       // zone reservee au bloc de reglages
         public const int BlobMax = 60 * 1024;
-        const string Magic = "ORDICFG1";
+        const string Magic = "CRCFGv01";
 
         public static string Hex(byte[] hash)
         {
@@ -55,7 +55,7 @@ namespace ClaudeRecovery
             return name + "='" + value.Replace("'", "'\\''") + "'\n";
         }
 
-        /// <summary>Bloc de 1 Mio : ORDICFG1\n taille\n sha256\n contenu, complete par des zeros.</summary>
+        /// <summary>Bloc de 1 Mio : CRCFGv01\n taille\n sha256\n contenu, complete par des zeros.</summary>
         public static byte[] BuildBlob(string envText)
         {
             byte[] payload = new UTF8Encoding(false).GetBytes(envText);
