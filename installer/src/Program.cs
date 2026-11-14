@@ -15,19 +15,24 @@ namespace ClaudeRecovery
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            Theme.Init();
             if (args.Length >= 2 && args[0] == "--screenshot")
             {
-                // Rendu de la fenetre dans un PNG, pour controler la mise en page.
+                // --screenshot <png> [fr|en] [etat] : rendu de la fenetre (ou d'un dialogue)
+                // dans un PNG, pour controler la mise en page. Etats : voir MainForm.Demo.
                 if (args.Length >= 3) L.Lang = args[2] == "fr" ? "fr" : "en";
                 using (var form = new MainForm())
                 {
                     form.Show();
+                    Form shown = form.Demo(args.Length >= 4 ? args[3] : "");
+                    if (shown != form) shown.Show(form);
                     Application.DoEvents();
-                    using (var bmp = new System.Drawing.Bitmap(form.Width, form.Height))
+                    using (var bmp = new System.Drawing.Bitmap(shown.Width, shown.Height))
                     {
-                        form.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, form.Width, form.Height));
+                        shown.DrawToBitmap(bmp, new System.Drawing.Rectangle(0, 0, shown.Width, shown.Height));
                         bmp.Save(args[1], System.Drawing.Imaging.ImageFormat.Png);
                     }
+                    if (shown != form) shown.Dispose();
                 }
                 return 0;
             }
