@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Premier démarrage d'une clé : lit les réglages déposés par l'installeur, puis crée
 # sur la clé elle-même la partition de persistance (connexion Claude mémorisée,
-# réglages, journaux) et, pour l'édition entreprise, la partition du mode Windows.
+# réglages, journaux) et la partition « ORDI-WIN » du mode Windows.
 #
 # Lancé par `ordi` (via sudo) tant que la persistance n'est pas active. Ne touche
 # qu'à la clé sur laquelle le système a démarré, et seulement à son espace libre.
@@ -78,14 +78,10 @@ if [ "$FREE_MIB" -lt 2048 ]; then
   exit 0
 fi
 
-WIN_MIB=0
-if [ "$EDITION" = "entreprise" ]; then
-  # Persistance plafonnée, le reste pour la partition du mode Windows.
-  [ "$PERSIST_SIZE_MIB" -gt $(( FREE_MIB / 2 )) ] && PERSIST_SIZE_MIB=$(( FREE_MIB / 2 ))
-  WIN_MIB=$(( FREE_MIB - PERSIST_SIZE_MIB ))
-else
-  PERSIST_SIZE_MIB="$FREE_MIB"
-fi
+# Persistance plafonnée ; le reste va à la partition lisible sous Windows (mode Windows,
+# présent dans les deux éditions).
+[ "$PERSIST_SIZE_MIB" -gt $(( FREE_MIB / 2 )) ] && PERSIST_SIZE_MIB=$(( FREE_MIB / 2 ))
+WIN_MIB=$(( FREE_MIB - PERSIST_SIZE_MIB ))
 
 read -r -p "Chiffrer la persistance par une phrase de passe (recommandé) ? [O/n] " answer
 LUKS=1; case "$answer" in n|N) LUKS=0 ;; esac
@@ -145,6 +141,7 @@ if [ -n "$WINPART" ]; then
   mkdir -p "$WMNT/config"
   cp -r "$ORDI_REPO/windows" "$WMNT/"
   cp -r "$ORDI_REPO/config/windows" "$WMNT/config/"
+  echo "$EDITION" > "$WMNT/windows/edition.txt"
   sync; umount "$WMNT"; rmdir "$WMNT"
   echo "Partition ORDI-WIN créée (mode Windows)."
 fi

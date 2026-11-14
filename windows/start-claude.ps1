@@ -1,5 +1,6 @@
 # Claude Recovery - mode Windows
-# Diagnostic d'un bug logiciel/navigateur sur le PC du client, puis nettoyage complet.
+# Diagnostic d'un bug logiciel/navigateur sous Windows, puis nettoyage complet.
+# Present dans les deux editions : la procedure suivie depend de windows\edition.txt.
 #
 # A lancer depuis la cle, dans PowerShell :
 #   powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1
@@ -25,9 +26,23 @@ $KeyRoot = Split-Path -Parent $PSScriptRoot
 Write-Host ''
 Write-Host '=== Claude Recovery - mode Windows ===' -ForegroundColor Cyan
 
-if (-not $Technicien) { $Technicien = Read-Host 'Technicien' }
-if (-not $Technicien) { Write-Host 'Nom du technicien obligatoire.'; exit 1 }
-if (-not $Job) { $Job = Read-Host 'Reference du job (ex. dupont-pc)' }
+# Edition de la cle (ecrite par la cle a son premier demarrage)
+$Edition = 'entreprise'
+$EditionFile = Join-Path $PSScriptRoot 'edition.txt'
+if (Test-Path $EditionFile) {
+    $read = (Get-Content $EditionFile -TotalCount 1).Trim()
+    if ($read -eq 'particulier') { $Edition = 'particulier' }
+}
+Write-Host "Edition : $Edition"
+
+if ($Edition -eq 'entreprise') {
+    if (-not $Technicien) { $Technicien = Read-Host 'Technicien' }
+    if (-not $Technicien) { Write-Host 'Nom du technicien obligatoire.'; exit 1 }
+    if (-not $Job) { $Job = Read-Host 'Reference du job (ex. dupont-pc)' }
+} else {
+    $Technicien = 'particulier'
+    if (-not $Job) { $Job = 'diagnostic' }
+}
 $Job = ($Job -replace '[^A-Za-z0-9._-]', '-').Trim('-')
 if (-not $Job) { Write-Host 'Reference obligatoire.'; exit 1 }
 $Job = '{0}_{1}' -f (Get-Date -Format 'yyyy-MM-dd'), $Job
@@ -76,7 +91,7 @@ try {
     }
 
     # --- Config du mode Windows, isolee dans le dossier de session --------------
-    Copy-Item (Join-Path $KeyRoot 'config\windows\CLAUDE.md') (Join-Path $ConfigDir 'CLAUDE.md')
+    Copy-Item (Join-Path $KeyRoot "config\windows\CLAUDE.$Edition.md") (Join-Path $ConfigDir 'CLAUDE.md')
     $HookPath = (Join-Path $PSScriptRoot 'log-command.ps1') -replace '\\', '\\'
     $Settings = (Get-Content (Join-Path $KeyRoot 'config\windows\settings.json') -Raw).Replace('__HOOK_PATH__', $HookPath)
     [System.IO.File]::WriteAllText((Join-Path $ConfigDir 'settings.json'), $Settings, (New-Object System.Text.UTF8Encoding($false)))
@@ -89,8 +104,13 @@ try {
 
     Write-Host ''
     Write-Host "Job        : $Job"
-    Write-Host "Technicien : $Technicien"
-    Write-Host 'Connectez-vous au compte Claude de votre entreprise quand Claude le demande.'
+    if ($Edition -eq 'entreprise') {
+        Write-Host "Technicien : $Technicien"
+        Write-Host 'Connectez-vous au compte Claude de votre entreprise quand Claude le demande.'
+    } else {
+        Write-Host 'Connectez-vous a votre compte Claude quand Claude le demande.'
+        Write-Host 'A la fermeture, tout ce que cette session a ajoute au PC sera supprime.'
+    }
     Write-Host ''
 
     Push-Location $WorkDir

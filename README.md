@@ -15,7 +15,7 @@ sur le disque d'origine.
 | Journal des commandes | Sur la clé uniquement | Sur la clé **et** envoyé au serveur de l'entreprise |
 | Rapport de fin de job | Dans le dossier de récupération | Idem, et envoyé au serveur |
 | Réglages à la création | Aucun | Nom de la clé, serveur de journaux et jeton, dépôt de mise à jour (facultatif) |
-| Mode Windows (diagnostic chez le client) | Non | Oui |
+| Mode Windows (diagnostic d'un bug logiciel) | Oui, procédure pour un non-spécialiste | Oui, procédure technicien |
 | Mises à jour | Dépôt GitHub du projet | Dépôt GitHub, ou le dépôt (Forgejo) de l'entreprise |
 
 L'édition est fixée dans l'image. Les deux images sont publiées dans les
@@ -59,7 +59,7 @@ technicien et la référence du job ; à la fermeture, les journaux en attente e
 `rapport.md` partent au serveur. Hors ligne, tout reste sur la clé et part à la prochaine
 session connectée.
 
-### Mode Windows (édition entreprise)
+### Mode Windows (les deux éditions)
 
 Depuis la partition `ORDI-WIN` de la clé, dans PowerShell :
 
@@ -67,7 +67,8 @@ Depuis la partition `ORDI-WIN` de la clé, dans PowerShell :
 powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1
 ```
 
-Le technicien se connecte au compte Claude à chaque session. À la fermeture : déconnexion,
+Le script suit la procédure de l'édition de la clé. On se connecte au compte Claude à
+chaque session. À la fermeture : déconnexion,
 rapport recopié sur la clé, suppression de tout ce que la session a ajouté au PC.
 
 ## Publier une release
@@ -90,7 +91,7 @@ Le dépôt doit être **public** pour que les clés et l'installeur y accèdent 
 config/
   entreprise/            Procédure (CLAUDE.md), permissions et hooks, modèle de réglages
   particulier/           Procédure et permissions de l'édition particulier
-  windows/               Procédure et permissions du mode Windows
+  windows/               Procédures (une par édition) et permissions du mode Windows
 hooks/
   log-command.sh         Journalise chaque commande de Claude, file d'attente hors ligne
 scripts/
