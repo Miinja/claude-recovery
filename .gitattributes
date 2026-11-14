@@ -1,0 +1,8 @@
+# Les scripts tournent sous Linux (clé live) : forcer les fins de ligne LF
+*.sh       text eol=lf
+*.service  text eol=lf
+*.json     text eol=lf
+*.md       text eol=lf
+packages.txt text eol=lf
+# Script Windows en CRLF
+*.ps1      text eol=crlf

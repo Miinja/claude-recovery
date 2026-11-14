@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(mkfs*)",
+      "Bash(wipefs*)",
+      "Bash(shred*)",
+      "Bash(blkdiscard*)",
+      "Bash(dd *of=/dev/*)",
+      "Bash(rm -rf /*)"
+    ],
+    "ask": [
+      "Bash(testdisk*)",
+      "Bash(fsck*)",
+      "Bash(e2fsck*)",
+      "Bash(ntfsfix*)",
+      "Bash(fdisk*)",
+      "Bash(sgdisk*)",
+      "Bash(parted*)",
+      "Bash(mount*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/opt/ordi/hooks/log-command.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

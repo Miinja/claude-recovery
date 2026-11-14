@@ -1,0 +1,32 @@
+# Paquets Debian de l'image live Claude Recovery
+# Récupération / diagnostic
+gddrescue
+testdisk
+smartmontools
+hdparm
+nvme-cli
+ntfs-3g
+exfatprogs
+dosfstools
+e2fsprogs
+btrfs-progs
+xfsprogs
+gdisk
+parted
+fdisk
+# Analyse / tri
+file
+jq
+fdupes
+exiftool
+clamav
+# VM pour disques suspects
+qemu-system-x86
+qemu-utils
+# Outils
+git
+curl
+tmux
+openssh-client
+nodejs
+npm

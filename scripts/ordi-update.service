@@ -1,0 +1,15 @@
+[Unit]
+Description=Claude Recovery - mise a jour de la config depuis le serveur ORDIServices
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ordi
+WorkingDirectory=/opt/ordi/claude-recovery
+ExecStart=/usr/bin/git pull --ff-only
+ExecStartPost=/bin/sh -c 'cp config/CLAUDE.md config/settings.json /home/ordi/.claude/ && cp hooks/*.sh /opt/ordi/hooks/'
+TimeoutStartSec=30
+
+[Install]
+WantedBy=multi-user.target

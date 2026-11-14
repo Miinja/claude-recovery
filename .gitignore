@@ -1,0 +1,81 @@
+# ============================================================
+#  claude-recovery — .gitignore
+#  Règle n°1 : AUCUNE donnée client ne doit finir dans le dépôt.
+# ============================================================
+
+# --- Données clients : images disque, fichiers récupérés ---
+*.img
+*.dd
+*.raw
+*.iso
+*.e01
+*.E01
+*.ex01
+*.aff
+*.vhd
+*.vhdx
+*.vmdk
+*.qcow2
+*.bin
+*.dmg
+*.dump
+recovered/
+recup_dir.*/
+jobs/
+cases/
+dossiers-clients/
+clients/
+
+# --- Rapports de fin de job (n° de série, technicien, client) ---
+rapport.md
+rapport-*.md
+rapports/
+
+# --- Mapfiles / logs ddrescue & testdisk ---
+*.map
+*.mapfile
+testdisk.log
+photorec.ses
+*.log
+*.jsonl
+logs/
+
+# --- Secrets & identifiants ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*.token
+*.kdbx
+*.ovpn
+.netrc
+.npmrc
+credentials*
+secrets/
+
+# --- Claude Code : réglages locaux / session ---
+.claude/settings.local.json
+.claude/.credentials.json
+.credentials.json
+.claude.json
+
+# --- Artefacts de build de la clé ---
+build/out/
+build/work/
+build/chroot/
+build/cache/
+*.squashfs
+
+# --- OS / éditeurs ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
