@@ -27,6 +27,7 @@ namespace ClaudeRecovery
         readonly FlatButton btnWrite = new FlatButton { Kind = ButtonKind.Accent };
         readonly FlatButton lnkSettings = new FlatButton { Kind = ButtonKind.Link };
         readonly FlatButton lnkLocal = new FlatButton { Kind = ButtonKind.Link };
+        readonly FlatButton lnkHelp = new FlatButton { Kind = ButtonKind.Link };
         readonly FlatButton btnAgain = new FlatButton();
         readonly FlatButton btnClose = new FlatButton { Kind = ButtonKind.Accent };
 
@@ -56,6 +57,9 @@ namespace ClaudeRecovery
             segLang.Selected = L.Lang == "fr" ? 0 : 1;
             segLang.SetBounds(Theme.S(W - 32 - 92), Theme.S(22), Theme.S(92), Theme.S(30));
 
+            lnkHelp.Font = Theme.F(9f);
+            lnkHelp.SetBounds(Theme.S(W - 32 - 92 - 16 - 110), Theme.S(25), Theme.S(110), Theme.S(24));
+
             int top = Theme.S(232), h = Theme.S(42);
             segEdition.SetBounds(Theme.S(StepX[0] - ColW / 2), top, Theme.S(ColW), h);
             btnDisk.SetBounds(Theme.S(StepX[1] - ColW / 2), top, Theme.S(ColW), h);
@@ -65,10 +69,11 @@ namespace ClaudeRecovery
             lnkLocal.SetBounds(Theme.S(W - 32 - 190), Theme.S(424), Theme.S(190), Theme.S(24));
             btnAgain.SetBounds(Theme.S(W / 2 - 200), Theme.S(372), Theme.S(195), h);
             btnClose.SetBounds(Theme.S(W / 2 + 5), Theme.S(372), Theme.S(195), h);
-            Controls.AddRange(new Control[] { segLang, segEdition, btnDisk, btnWrite, lnkSettings, lnkLocal, btnAgain, btnClose });
+            Controls.AddRange(new Control[] { segLang, lnkHelp, segEdition, btnDisk, btnWrite, lnkSettings, lnkLocal, btnAgain, btnClose });
 
             segLang.SelectedChanged += delegate { L.Lang = segLang.Selected == 0 ? "fr" : "en"; ApplyTexts(); };
             segEdition.SelectedChanged += delegate { ClearStatus(); ApplyTexts(); };
+            lnkHelp.Click += delegate { try { System.Diagnostics.Process.Start(HelpUrl); } catch (Exception) { } };
             btnDisk.Click += delegate { ChooseDisk(); };
             lnkSettings.Click += delegate { EditSettings(); };
             lnkLocal.Click += delegate { ChooseLocal(); };
@@ -79,6 +84,11 @@ namespace ClaudeRecovery
         }
 
         protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Theme.DarkTitleBar(this); }
+
+        static string HelpUrl
+        {
+            get { return "https://github.com/" + Releases.Repo + "/blob/main/" + L.T("README.fr.md#cr%C3%A9er-une-cl%C3%A9", "README.md#creating-a-key"); }
+        }
 
         string Edition { get { return segEdition.Selected == 1 ? "entreprise" : "particulier"; } }
 
@@ -104,6 +114,7 @@ namespace ClaudeRecovery
                 ? L.T("Réglages : ", "Settings: ") + settings.KeyId + L.T("  ·  modifier", "  ·  edit")
                 : L.T("Remplir les réglages…", "Fill in the settings…");
             lnkLocal.Text = localImage != null ? L.T("Revenir à la release", "Back to the release") : L.T("Utiliser un fichier local…", "Use a local file…");
+            lnkHelp.Text = L.T("Aide en ligne", "Online help");
             btnAgain.Text = L.T("Créer une autre clé", "Create another key");
             btnClose.Text = L.T("Fermer", "Close");
 

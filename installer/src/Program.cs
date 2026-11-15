@@ -12,6 +12,12 @@ namespace ClaudeRecovery
         static int Main(string[] args)
         {
             if (args.Length >= 1 && args[0] == "--selftest") return SelfTest(args);
+            if (args.Length >= 4 && args[0] == "--probe")
+            {
+                // --probe <adresse> <jeton> <fichier> : le test du serveur de journaux, sans fenetre
+                File.WriteAllText(args[3], SettingsDialog.Probe(args[1], args[2]));
+                return 0;
+            }
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);

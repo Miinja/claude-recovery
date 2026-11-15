@@ -51,6 +51,31 @@ Download `ClaudeRecoveryInstaller.exe` from the latest release, run it, then:
 4. **Write the key**. The installer downloads the image, checks its checksum, writes it,
    then reads the key back to verify it.
 
+### The installer's options
+
+| Option | What it does | Where to find the value |
+|---|---|---|
+| **FR / EN** | Language of the installer, of the messages on the key and of Claude's procedure | Your choice. Can be changed later on the key with `claude-recovery lang en` |
+| **Personal / Business** | Which image is written | Personal: you recover your own files. Business: a technician works for customers and every command is logged |
+| **Select the USB key** | The disk that will be erased | Only USB disks are listed. A disk over 130 GB is flagged in red: check it is not a backup drive |
+| **Use a local file…** | Writes an `.iso` you already have instead of downloading the latest release | An image downloaded from the [releases](https://github.com/Miinja/claude-recovery/releases), or built with `build/build-iso.sh` |
+| **Online help** | Opens this page | |
+
+Business edition settings (the "Fill in the settings…" link under the edition):
+
+| Field | Required | Where to find the value |
+|---|---|---|
+| **Company name** | No | Your workshop or company name. It only identifies who the key belongs to |
+| **Name of this key** | Yes | A name you choose, e.g. `key01`. Use the name written on this key's line in `tokens.txt` on your server |
+| **Log server** | No | `https://` followed by the `LOGS_DOMAIN` value of `server/.env` on your server (see [server/README.md](server/README.md)). Empty: logs stay on the key |
+| **Key token** | With a log server | The token on this key's line in `server/tokens.txt` (`name token`). Create one on the server with `openssl rand -hex 32`, add the line, no restart needed |
+| **Update repository** | No | Leave empty to follow this GitHub repository. Only fill in the `https` address of your own copy if the company hosts one |
+
+**Test the server** checks, from your PC, that the log server answers and accepts the
+token. It writes nothing on the server. With Caddy's internal certificate the test reports
+an untrusted certificate: that is expected on a PC that does not have the certificate;
+the key accepts it if the image was built with it (see [server/README.md](server/README.md)).
+
 ### On Linux
 
 ```
@@ -164,8 +189,31 @@ partition, stores the settings there, then erases the block.
 - [x] Image build — both editions build in a `debian:trixie` container, and the release workflow has run on GitHub
 - [x] First boot — tested in a virtual machine (QEMU): BIOS and UEFI boot, plain and encrypted persistence, installer settings applied (business edition), second boot with persistence active
 - [ ] First boot on a real USB key — **never tried**
-- [ ] Windows mode — to be validated on a test PC
+- [x] Windows mode — launcher tested on a PC for both editions with a stand-in for Claude (isolated config, log, report, cleanup)
+- [ ] Windows mode — a real Claude session on a customer PC has **never been tried**
 - [ ] Log server and Forgejo — files ready in `server/`, to be deployed
+
+### Recovery scenarios tested
+
+Each scenario runs on a fake disk (an image file) holding 15 files: 12 JPEG photos, a PNG,
+a PDF and a Word document. The disk is attached read-only, cloned with `ddrescue`, and the
+work is done on the clone. A file counts as recovered only if its SHA-256 matches the
+original.
+
+| Scenario | Tool used on the clone | Recovered intact | Names and folders |
+|---|---|---|---|
+| FAT32 card formatted by mistake | `photorec` | 15 / 15 | Lost (expected with PhotoRec) |
+| Files deleted on NTFS, recycle bin emptied | `ntfsundelete --truncate` | 15 / 15 | Names kept, folders lost |
+| Partition table erased, disk shown as "not initialised" | `testdisk` to locate the partition, read-only mount | 15 / 15 | Kept |
+| Disk with bad sectors (2 unreadable areas, 192 sectors) | `ddrescue`, then read-only mount of the clone | 14 / 15 | Kept |
+
+In every scenario the source disk's checksum is identical before and after. In the last
+one, `ddrescue` rescued 99.96 % of the disk; the photo that sat on an unreadable area
+comes back damaged.
+
+These are favourable cases: small disks, unfragmented files, a quick format. They show
+that the tools shipped on the key work on the classic failures; real disks will do worse.
+The commands were run by hand following the procedure, not by a Claude session.
 
 ## License
 

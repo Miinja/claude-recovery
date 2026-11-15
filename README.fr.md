@@ -52,6 +52,32 @@ Télécharger `ClaudeRecoveryInstaller.exe` depuis la dernière release, le lanc
 4. **Écrire la clé**. L'installeur télécharge l'image, vérifie son empreinte, l'écrit,
    puis relit la clé pour contrôle.
 
+### Les options de l'installeur
+
+| Option | Ce qu'elle fait | Où trouver la valeur |
+|---|---|---|
+| **FR / EN** | Langue de l'installeur, des messages de la clé et de la procédure de Claude | Au choix. Se change ensuite sur la clé avec `claude-recovery lang fr` |
+| **Particulier / Entreprise** | L'image qui sera écrite | Particulier : vous récupérez vos propres fichiers. Entreprise : un technicien intervient pour des clients et chaque commande est journalisée |
+| **Choisir la clé USB** | Le disque qui sera effacé | Seuls les disques USB sont proposés. Un disque de plus de 130 Go est signalé en rouge : vérifiez que ce n'est pas un disque de sauvegarde |
+| **Utiliser un fichier local…** | Écrit un `.iso` que vous avez déjà, au lieu de télécharger la dernière release | Une image téléchargée depuis les [releases](https://github.com/Miinja/claude-recovery/releases), ou construite avec `build/build-iso.sh` |
+| **Aide en ligne** | Ouvre cette page | |
+
+Réglages de l'édition entreprise (lien « Remplir les réglages… » sous l'édition) :
+
+| Champ | Obligatoire | Où trouver la valeur |
+|---|---|---|
+| **Nom de l'entreprise** | Non | Le nom de votre atelier ou de votre société. Il sert seulement à identifier à qui appartient la clé |
+| **Nom de cette clé** | Oui | Un nom que vous choisissez, par exemple `cle01`. Prenez celui écrit sur la ligne de cette clé dans `tokens.txt`, sur votre serveur |
+| **Serveur de journaux** | Non | `https://` suivi de la valeur `LOGS_DOMAIN` du fichier `server/.env` de votre serveur (voir [server/README.fr.md](server/README.fr.md)). Vide : le journal reste sur la clé |
+| **Jeton de la clé** | Avec un serveur de journaux | Le jeton de la ligne de cette clé dans `server/tokens.txt` (`nom jeton`). Pour en créer un sur le serveur : `openssl rand -hex 32`, ajoutez la ligne, aucun redémarrage n'est nécessaire |
+| **Dépôt de mise à jour** | Non | Laissez vide pour suivre ce dépôt GitHub. Indiquez l'adresse `https` de votre propre copie seulement si l'entreprise en héberge une |
+
+**Tester le serveur** vérifie, depuis votre PC, que le serveur de journaux répond et
+accepte le jeton. Il n'écrit rien sur le serveur. Avec le certificat interne de Caddy, le
+test signale un certificat non reconnu : c'est attendu sur un PC qui ne possède pas ce
+certificat ; la clé, elle, l'accepte si l'image a été construite avec (voir
+[server/README.fr.md](server/README.fr.md)).
+
 ### Sous Linux
 
 ```
@@ -166,8 +192,32 @@ persistance, y range les réglages, puis efface le bloc.
 - [x] Build des images — les deux éditions se construisent dans un conteneur `debian:trixie`, et le workflow de release a tourné sur GitHub
 - [x] Premier démarrage — testé en machine virtuelle (QEMU) : démarrage BIOS et UEFI, persistance en clair et chiffrée, réglages de l'installeur appliqués (édition entreprise), second démarrage avec persistance active
 - [ ] Premier démarrage sur une vraie clé USB — **jamais essayé**
-- [ ] Mode Windows — à valider sur un PC de test
+- [x] Mode Windows — lanceur testé sur un PC pour les deux éditions, avec un programme témoin à la place de Claude (configuration isolée, journal, rapport, nettoyage)
+- [ ] Mode Windows — une vraie session Claude sur le PC d'un client n'a **jamais été essayée**
 - [ ] Serveur de journaux et Forgejo — fichiers prêts dans `server/`, à déployer
+
+### Scénarios de récupération testés
+
+Chaque scénario se joue sur un faux disque (un fichier image) contenant 15 fichiers :
+12 photos JPEG, un PNG, un PDF et un document Word. Le disque est attaché en lecture
+seule, cloné avec `ddrescue`, et le travail se fait sur le clone. Un fichier ne compte
+comme retrouvé que si son empreinte SHA-256 est celle de l'original.
+
+| Scénario | Outil utilisé sur le clone | Retrouvés intacts | Noms et dossiers |
+|---|---|---|---|
+| Carte FAT32 formatée par erreur | `photorec` | 15 / 15 | Perdus (normal avec PhotoRec) |
+| Fichiers supprimés sur NTFS, corbeille vidée | `ntfsundelete --truncate` | 15 / 15 | Noms conservés, dossiers perdus |
+| Table de partitions effacée, disque vu « non initialisé » | `testdisk` pour localiser la partition, montage en lecture seule | 15 / 15 | Conservés |
+| Disque avec secteurs défectueux (2 zones illisibles, 192 secteurs) | `ddrescue`, puis montage du clone en lecture seule | 14 / 15 | Conservés |
+
+Dans tous les scénarios, l'empreinte du disque source est identique avant et après. Dans
+le dernier, `ddrescue` a sauvé 99,96 % du disque ; la photo qui se trouvait sur une zone
+illisible revient abîmée.
+
+Ce sont des cas favorables : petits disques, fichiers non fragmentés, formatage rapide.
+Ils montrent que les outils embarqués sur la clé fonctionnent sur les pannes classiques ;
+de vrais disques feront moins bien. Les commandes ont été lancées à la main en suivant la
+procédure, pas par une session Claude.
 
 ## Licence
 

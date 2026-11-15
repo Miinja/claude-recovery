@@ -442,11 +442,17 @@ namespace ClaudeRecovery
     public sealed class SettingsDialog : DarkDialog
     {
         readonly TextBox[] boxes = new TextBox[5];
-        readonly Label error = new Label();
+        readonly Label message = new Label();
+        readonly FlatButton test;
         public readonly KeySettings Result = new KeySettings();
 
+        public static string ServerGuideUrl
+        {
+            get { return "https://github.com/" + Releases.Repo + "/blob/main/server/" + L.T("README.fr.md", "README.md"); }
+        }
+
         public SettingsDialog(KeySettings current)
-            : base(L.T("Réglages de l'édition entreprise", "Business edition settings"), 560, 520)
+            : base(L.T("Réglages de l'édition entreprise", "Business edition settings"), 600, 690)
         {
             string[] labels = {
                 L.T("Nom de l'entreprise", "Company name"),
@@ -454,48 +460,131 @@ namespace ClaudeRecovery
                 L.T("Serveur de journaux", "Log server"),
                 L.T("Jeton de la clé", "Key token"),
                 L.T("Dépôt de mise à jour", "Update repository") };
-            string[] hints = {
-                L.T("facultatif", "optional"),
-                L.T("ex. cle01 - apparaît dans les journaux", "e.g. key01 - shown in the logs"),
-                L.T("https://… - vide : journal conservé sur la clé seulement", "https://… - empty: logs stay on the key only"),
-                L.T("jeton de cette clé sur le serveur de journaux", "this key's token on the log server"),
-                L.T("facultatif - vide : dépôt GitHub du projet", "optional - empty: the project's GitHub repository") };
+            string[] tags = {
+                L.T("facultatif", "optional"), L.T("obligatoire", "required"), L.T("facultatif", "optional"),
+                L.T("obligatoire avec un serveur", "required with a server"), L.T("facultatif", "optional") };
+            string[] help = {
+                L.T("Le nom de votre atelier ou de votre société. Il sert seulement à identifier à qui appartient la clé.",
+                    "The name of your workshop or company. It only identifies who the key belongs to."),
+                L.T("Un nom que vous choisissez pour reconnaître cette clé dans les journaux, par exemple cle01. Prenez le même nom que sur la ligne de cette clé dans tokens.txt.",
+                    "A name you choose to recognise this key in the logs, for example key01. Use the same name as on this key's line in tokens.txt."),
+                L.T("L'adresse de votre récepteur de journaux : https:// suivi de la valeur LOGS_DOMAIN du fichier server/.env de votre serveur. Vide : le journal reste sur la clé.",
+                    "The address of your log receiver: https:// followed by the LOGS_DOMAIN value from server/.env on your server. Empty: logs stay on the key."),
+                L.T("Le jeton écrit sur la ligne de cette clé dans server/tokens.txt (nom, puis jeton). Pour en créer un sur le serveur : openssl rand -hex 32",
+                    "The token on this key's line in server/tokens.txt (name, then token). To create one on the server: openssl rand -hex 32"),
+                L.T("Laissez vide : la clé se met à jour depuis le dépôt GitHub du projet. À remplir seulement si l'entreprise héberge sa propre copie (adresse https du dépôt).",
+                    "Leave empty: the key updates from the project's GitHub repository. Fill in only if the company hosts its own copy (https address of the repository).") };
             string[] values = { current.Company, current.KeyId, current.LogUrl, current.Token, current.GitUrl };
             int width = ClientSize.Width - 2 * Pad;
             for (int i = 0; i < 5; i++)
             {
-                int y = Theme.S(66 + i * 68);
+                int y = Theme.S(64 + i * 98);
                 var label = new Label { Text = labels[i], ForeColor = Theme.Text, Font = Theme.Semi(9.5f), UseMnemonic = false };
-                label.SetBounds(Pad, y, Theme.S(200), Theme.S(20));
-                var hint = new Label { Text = hints[i], ForeColor = Theme.Muted, Font = Theme.F(8.5f), TextAlign = ContentAlignment.TopRight, UseMnemonic = false };
-                hint.SetBounds(Pad + Theme.S(200), y + Theme.S(2), width - Theme.S(200), Theme.S(18));
+                label.SetBounds(Pad, y, Theme.S(260), Theme.S(20));
+                var tag = new Label { Text = tags[i], ForeColor = i == 1 ? Theme.Accent : Theme.Muted, Font = Theme.F(8.5f), TextAlign = ContentAlignment.TopRight, UseMnemonic = false };
+                tag.SetBounds(Pad + Theme.S(260), y + Theme.S(2), width - Theme.S(260), Theme.S(18));
                 var frame = new Panel { BackColor = Theme.Surface };
                 frame.SetBounds(Pad, y + Theme.S(24), width, Theme.S(32));
                 boxes[i] = new TextBox { BorderStyle = BorderStyle.None, BackColor = Theme.Surface, ForeColor = Theme.Text, Font = Theme.F(10.5f), Text = values[i] };
                 boxes[i].SetBounds(Theme.S(10), Theme.S(6), width - Theme.S(20), Theme.S(22));
                 frame.Controls.Add(boxes[i]);
-                Controls.AddRange(new Control[] { label, hint, frame });
+                var hint = new Label { Text = help[i], ForeColor = Theme.Muted, Font = Theme.F(8.5f), UseMnemonic = false };
+                hint.SetBounds(Pad, y + Theme.S(60), width, Theme.S(34));
+                Controls.AddRange(new Control[] { label, tag, frame, hint });
             }
             boxes[3].UseSystemPasswordChar = true;
 
-            error.ForeColor = Theme.Danger; error.UseMnemonic = false;
-            error.SetBounds(Pad, Theme.S(408), width, Theme.S(38));
-            Controls.Add(error);
+            var guide = new FlatButton { Kind = ButtonKind.Link, Font = Theme.F(9f),
+                Text = L.T("Guide de mise en place du serveur (ouvre le navigateur)", "Server setup guide (opens the browser)") };
+            guide.SetBounds(Pad, Theme.S(556), Theme.S(340), Theme.S(22));
+            guide.Click += delegate { try { System.Diagnostics.Process.Start(ServerGuideUrl); } catch (Exception) { } };
+            Controls.Add(guide);
+
+            message.UseMnemonic = false;
+            message.SetBounds(Pad, Theme.S(582), width, Theme.S(36));
+            Controls.Add(message);
 
             FlatButton ok = Button(L.T("Enregistrer", "Save"), ButtonKind.Accent);
             ok.Click += delegate { Accept(); };
             FlatButton cancel = Button(L.T("Annuler", "Cancel"), ButtonKind.Ghost);
             cancel.Click += delegate { DialogResult = DialogResult.Cancel; };
             PlaceButtons(ok, cancel);
+            test = Button(L.T("Tester le serveur", "Test the server"), ButtonKind.Ghost);
+            test.SetBounds(Pad, ok.Top, Theme.S(170), ok.Height);
+            test.Click += async delegate { await TestServer(); };
+            Controls.Add(test);
+        }
+
+        void Say(string text, Color color) { message.ForeColor = color; message.Text = text; }
+
+        void Collect()
+        {
+            Result.Company = boxes[0].Text.Trim(); Result.KeyId = boxes[1].Text.Trim(); Result.LogUrl = boxes[2].Text.Trim().TrimEnd('/');
+            Result.Token = boxes[3].Text.Trim(); Result.GitUrl = boxes[4].Text.Trim();
         }
 
         void Accept()
         {
-            Result.Company = boxes[0].Text.Trim(); Result.KeyId = boxes[1].Text.Trim(); Result.LogUrl = boxes[2].Text.Trim();
-            Result.Token = boxes[3].Text.Trim(); Result.GitUrl = boxes[4].Text.Trim();
+            Collect();
             string problem = Result.Validate();
-            if (problem != null) { error.Text = problem; return; }
+            if (problem != null) { Say(problem, Theme.Danger); return; }
             DialogResult = DialogResult.OK;
+        }
+
+        /// <summary>Interroge le recepteur : joignable ? jeton accepte ? N'y ecrit rien.</summary>
+        async System.Threading.Tasks.Task TestServer()
+        {
+            Collect();
+            string url = Result.LogUrl, token = Result.Token;
+            if (!Regex.IsMatch(url, "^https?://[^\\s]+$"))
+            {
+                Say(L.T("Indiquez d'abord l'adresse du serveur de journaux (https://…).", "Enter the log server address first (https://…)."), Theme.Danger);
+                return;
+            }
+            test.Enabled = false;
+            Say(L.T("Test en cours…", "Testing…"), Theme.Muted);
+            string result = await System.Threading.Tasks.Task.Run(delegate { return Probe(url, token); });
+            if (IsDisposed) return;
+            test.Enabled = true;
+            Say(result.Substring(1), result[0] == '+' ? Theme.Ok : Theme.Danger);
+        }
+
+        /// <summary>Resultat prefixe par + (tout va bien) ou - (probleme).</summary>
+        public static string Probe(string url, string token)
+        {
+            try
+            {
+                System.Net.ServicePointManager.SecurityProtocol = (System.Net.SecurityProtocolType)3072;   // TLS 1.2
+                var health = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url + "/healthz");
+                health.Timeout = 8000;
+                using (health.GetResponse()) { }
+                if (token.Length == 0)
+                    return "-" + L.T("Serveur joignable. Renseignez le jeton de la clé pour le vérifier aussi.", "Server reachable. Enter the key token to check it too.");
+                var post = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(url + "/api/logs");
+                post.Method = "POST"; post.Timeout = 8000; post.ContentLength = 0;
+                post.ContentType = "application/x-ndjson";
+                post.Headers["Authorization"] = "Bearer " + token;
+                using (post.GetResponse()) { }
+                return "+" + L.T("Serveur joignable et jeton accepté.", "Server reachable and token accepted.");
+            }
+            catch (System.Net.WebException e)
+            {
+                var response = e.Response as System.Net.HttpWebResponse;
+                if (response != null && (int)response.StatusCode == 401)
+                    return "-" + L.T("Serveur joignable, mais ce jeton est refusé : vérifiez la ligne de la clé dans tokens.txt.",
+                                     "Server reachable, but this token is refused: check the key's line in tokens.txt.");
+                if (response != null)
+                    return "-" + L.T("Le serveur répond avec une erreur ", "The server answers with error ") + (int)response.StatusCode
+                               + L.T(" : est-ce bien l'adresse du récepteur de journaux ?", ": is this really the log receiver's address?");
+                if (e.Status == System.Net.WebExceptionStatus.TrustFailure)
+                    return "-" + L.T("Certificat du serveur non reconnu par ce PC (autorité interne ?). La clé, elle, l'acceptera si son image contient le certificat.",
+                                     "The server's certificate is not trusted by this PC (internal authority?). The key will accept it if its image includes the certificate.");
+                return "-" + L.T("Serveur injoignable depuis ce PC : ", "Server unreachable from this PC: ") + e.Message;
+            }
+            catch (Exception e)
+            {
+                return "-" + L.T("Test impossible : ", "Test failed: ") + e.Message;
+            }
         }
 
         protected override bool ProcessDialogKey(Keys keyData)
