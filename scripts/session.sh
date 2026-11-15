@@ -52,7 +52,8 @@ if [ "${1:-}" = "events" ]; then
   [ $# -gt 0 ] || { t "Usage : ctrlz events <dossier winevt/Logs ou fichier .evtx> [--days N]" \
                       "Usage: ctrlz events <winevt/Logs folder or .evtx file> [--days N]"; exit 1; }
   t "Lecture des journaux (une à trois minutes)…" "Reading the logs (one to three minutes)…" >&2
-  CR_LANG="$CR_LANG" exec python3 "$CR_REPO/scripts/windows-inspect.py" events "$@"
+  # python3-evtx 0.7.4 prints a SyntaxWarning of its own on Python 3.12+: harmless, hidden.
+  CR_LANG="$CR_LANG" exec python3 -W ignore::SyntaxWarning "$CR_REPO/scripts/windows-inspect.py" events "$@"
 fi
 
 # --- Installer settings: read before any question (they set the language) --------
