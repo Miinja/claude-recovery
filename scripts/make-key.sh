@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Prepares a Claude Recovery key from Linux. Command-line equivalent of the Windows
+# Prepares a Ctrl-Z key from Linux. Command-line equivalent of the Windows
 # installer (installer/): same image, same settings, same format.
 #
-#   sudo scripts/make-key.sh entreprise  /dev/sdX [fr|en]   # downloads the latest release
-#   sudo scripts/make-key.sh particulier /dev/sdX [fr|en]
+#   sudo scripts/make-key.sh business /dev/sdX [fr|en]   # downloads the latest release
+#   sudo scripts/make-key.sh personal /dev/sdX [fr|en]
 #   sudo scripts/make-key.sh path/to/image.iso /dev/sdX [fr|en]
 #
 # The third argument is the key's language (default: this machine's). The script
@@ -16,28 +16,28 @@ set -euo pipefail
 
 # shellcheck source=scripts/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
-RELEASES="https://github.com/Miinja/claude-recovery/releases/latest/download"
+RELEASES="https://github.com/Miinja/ctrl-z/releases/latest/download"
 CR_LANG="$(cr_lang)"          # language of this script's messages
 
 SRC="${1:-}"; DEV="${2:-}"; KEY_LANG="${3:-$CR_LANG}"
 [ "$(id -u)" -eq 0 ] || { t "À lancer en root (sudo)." "Must be run as root (sudo)." >&2; exit 1; }
 if [ -z "$SRC" ] || [ ! -b "$DEV" ]; then
-  echo "Usage: $0 <entreprise|particulier|image.iso> </dev/sdX> [fr|en]" >&2; exit 1
+  echo "Usage: $0 <business|personal|image.iso> </dev/sdX> [fr|en]" >&2; exit 1
 fi
-case "$KEY_LANG" in fr|en) ;; *) echo "Usage: $0 <entreprise|particulier|image.iso> </dev/sdX> [fr|en]" >&2; exit 1 ;; esac
+case "$KEY_LANG" in fr|en) ;; *) echo "Usage: $0 <business|personal|image.iso> </dev/sdX> [fr|en]" >&2; exit 1 ;; esac
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 # --- Image and edition --------------------------------------------------------
 case "$SRC" in
-  entreprise|particulier)
+  business|personal)
     EDITION="$SRC"
-    ISO="$TMP/claude-recovery-$EDITION.iso"
+    ISO="$TMP/ctrl-z-$EDITION.iso"
     t "→ Téléchargement de la dernière release ($EDITION)…" "→ Downloading the latest release ($EDITION)…"
-    curl -fL --progress-bar -o "$ISO" "$RELEASES/claude-recovery-$EDITION.iso"
-    curl -fsSL -o "$ISO.sha256" "$RELEASES/claude-recovery-$EDITION.iso.sha256"
-    if ! ( cd "$TMP" && sha256sum -c --quiet "claude-recovery-$EDITION.iso.sha256" ); then
+    curl -fL --progress-bar -o "$ISO" "$RELEASES/ctrl-z-$EDITION.iso"
+    curl -fsSL -o "$ISO.sha256" "$RELEASES/ctrl-z-$EDITION.iso.sha256"
+    if ! ( cd "$TMP" && sha256sum -c --quiet "ctrl-z-$EDITION.iso.sha256" ); then
       t "Empreinte de l'image incorrecte : téléchargement abandonné." \
         "Wrong image checksum: download discarded." >&2
       exit 1
@@ -47,13 +47,13 @@ case "$SRC" in
     ISO="$SRC"
     [ -f "$ISO" ] || { t "Image introuvable : $ISO" "Image not found: $ISO" >&2; exit 1; }
     case "$(basename "$ISO")" in
-      *entreprise*)  EDITION=entreprise ;;
-      *particulier*) EDITION=particulier ;;
-      *) ask EDITION "Édition de cette image [entreprise/particulier] :" "Edition of this image [entreprise/particulier]:" ;;
+      *business*|*entreprise*) EDITION=business ;;
+      *personal*|*particulier*) EDITION=personal ;;
+      *) ask EDITION "Édition de cette image [business/personal] :" "Edition of this image [business/personal]:" ;;
     esac
     ;;
 esac
-case "$EDITION" in entreprise|particulier) ;; *) t "Édition inconnue." "Unknown edition." >&2; exit 1 ;; esac
+case "$EDITION" in business|personal) ;; *) t "Édition inconnue." "Unknown edition." >&2; exit 1 ;; esac
 
 # --- Guards: whole disk, plugged in over USB, not mounted ----------------------
 [ "$(lsblk -dno TYPE "$DEV")" = "disk" ] || { t "$DEV n'est pas un disque entier." "$DEV is not a whole disk." >&2; exit 1; }
@@ -69,7 +69,7 @@ CONF="$TMP/config.env"
   echo "# make-key.sh $(date +%F)"
   cr_env_line RECOVERY_LANG "$KEY_LANG"
 } > "$CONF"
-if [ "$EDITION" = "entreprise" ]; then
+if [ "$EDITION" = "business" ]; then
   echo
   t "Réglages de la clé (édition entreprise). Entrée = laisser vide." \
     "Key settings (business edition). Enter = leave empty."
@@ -110,7 +110,7 @@ t "→ Réglages déposés sur la clé." "→ Settings written to the key."
 sync; partprobe "$DEV" 2>/dev/null || true
 
 echo
-t "Clé prête. Démarrez un PC dessus et tapez : claude-recovery" \
-  "Key ready. Boot a PC from it and type: claude-recovery"
+t "Clé prête. Démarrez un PC dessus et tapez : ctrlz" \
+  "Key ready. Boot a PC from it and type: ctrlz"
 t "Au premier démarrage, la clé crée sa partition de persistance." \
   "On first boot, the key creates its persistence partition."

@@ -7,7 +7,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ClaudeRecovery
+namespace CtrlZ
 {
     public sealed class MainForm : Form
     {
@@ -91,11 +91,11 @@ namespace ClaudeRecovery
             get { return "https://github.com/" + Releases.Repo + "/blob/main/" + L.T("README.fr.md#cr%C3%A9er-une-cl%C3%A9", "README.md#creating-a-key"); }
         }
 
-        string Edition { get { return segEdition.Selected == 1 ? "entreprise" : "particulier"; } }
+        string Edition { get { return segEdition.Selected == 1 ? "business" : "personal"; } }
 
         static string EditionName(string edition)
         {
-            return edition == "entreprise" ? L.T("entreprise", "business") : L.T("particulier", "personal");
+            return edition == "business" ? L.T("entreprise", "business") : L.T("particulier", "personal");
         }
 
         void ClearStatus() { status = ""; statusIsError = false; }
@@ -105,7 +105,7 @@ namespace ClaudeRecovery
         /// <summary>Sets the texts in the current language and shows the controls of the view.</summary>
         void ApplyTexts()
         {
-            Text = "Claude Recovery";
+            Text = "Ctrl-Z";
             segEdition.SetItems(L.T("Particulier", "Personal"), L.T("Entreprise", "Business"));
             btnDisk.Text = disk != null ? disk.Model : L.T("Choisir la clé USB", "Select the USB key");
             btnDisk.Kind = disk != null ? ButtonKind.Ghost : ButtonKind.Accent;
@@ -121,7 +121,7 @@ namespace ClaudeRecovery
 
             bool setup = view == View.Setup;
             segEdition.Visible = btnDisk.Visible = btnWrite.Visible = lnkLocal.Visible = setup;
-            lnkSettings.Visible = setup && Edition == "entreprise";
+            lnkSettings.Visible = setup && Edition == "business";
             btnAgain.Visible = btnClose.Visible = view == View.Done;
             segLang.Enabled = view != View.Busy;
             Invalidate();
@@ -141,9 +141,12 @@ namespace ClaudeRecovery
             g.Clear(Theme.Back);
 
             using (Font title = Theme.Semi(13f))
-                Draw(g, "Claude Recovery", title, Theme.Text, 32, 20, 300, 32, TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter);
+                Draw(g, "Ctrl-Z", title, Theme.Text, 32, 20, 300, 32, TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter);
             using (Font small = Theme.F(8.5f))
-                Draw(g, BuildInfo.Version, small, Theme.Muted, 190, 22, 200, 32, TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter);
+            {
+                Draw(g, BuildInfo.Version, small, Theme.Muted, 104, 22, 120, 32, TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter);
+                Draw(g, "powered by Claude Code", small, Theme.Muted, 32, 50, 300, 18, TextFormatFlags.NoPrefix);
+            }
 
             // State of the three steps: 2 = done, 1 = current, 0 = to come
             int[] state = { 2, disk != null ? 2 : 1, disk != null ? 1 : 0 };
@@ -218,7 +221,7 @@ namespace ClaudeRecovery
         void PaintSetup(Graphics g)
         {
             const TextFormatFlags sub = TextFormatFlags.HorizontalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix;
-            string edition = Edition == "entreprise"
+            string edition = Edition == "business"
                 ? L.T("Pour un technicien. Chaque commande est journalisée et envoyée au serveur de l'entreprise.",
                       "For a technician. Every command is logged and sent to the company's server.")
                 : L.T("Pour récupérer ses propres fichiers. Claude explique chaque étape, rien n'est envoyé à un serveur.",
@@ -276,7 +279,7 @@ namespace ClaudeRecovery
             {
                 var box = new RectangleF(Theme.S(W / 2f - 100), Theme.S(300f), Theme.S(200f), Theme.S(28f));
                 Theme.FillRound(g, Theme.Surface, box, Theme.S(6f));
-                TextRenderer.DrawText(g, "claude-recovery", mono, Rectangle.Round(box), Theme.Text, Theme.Center);
+                TextRenderer.DrawText(g, "ctrlz", mono, Rectangle.Round(box), Theme.Text, Theme.Center);
             }
         }
 
@@ -307,13 +310,13 @@ namespace ClaudeRecovery
         void ChooseLocal()
         {
             if (localImage != null) { localImage = null; ApplyTexts(); return; }
-            using (var dlg = new OpenFileDialog { Filter = "Claude Recovery (*.iso)|*.iso", Title = L.T("Choisir une image", "Choose an image") })
+            using (var dlg = new OpenFileDialog { Filter = "Ctrl-Z (*.iso)|*.iso", Title = L.T("Choisir une image", "Choose an image") })
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 localImage = dlg.FileName;
                 string name = Path.GetFileName(localImage).ToLowerInvariant();
-                if (name.Contains("entreprise")) segEdition.Selected = 1;
-                else if (name.Contains("particulier")) segEdition.Selected = 0;
+                if (name.Contains("business") || name.Contains("entreprise")) segEdition.Selected = 1;
+                else if (name.Contains("personal") || name.Contains("particulier")) segEdition.Selected = 0;
                 ApplyTexts();
             }
         }
@@ -329,14 +332,14 @@ namespace ClaudeRecovery
         }
 
         /// <summary>
-        /// Text of the future /etc/claude-recovery/config.env: the language for both
+        /// Text of the future /etc/ctrl-z/config.env: the language for both
         /// editions, plus the business edition's settings.
         /// </summary>
         string BuildEnv(string edition)
         {
-            string env = "# Claude Recovery installer " + BuildInfo.Version + ", " + DateTime.Now.ToString("yyyy-MM-dd") + "\n"
+            string env = "# Ctrl-Z installer " + BuildInfo.Version + ", " + DateTime.Now.ToString("yyyy-MM-dd") + "\n"
                        + Imaging.EnvLine("RECOVERY_LANG", L.Lang);
-            if (edition != "entreprise") return env;
+            if (edition != "business") return env;
             return env
                 + Imaging.EnvLine("RECOVERY_COMPANY", settings.Company)
                 + Imaging.EnvLine("RECOVERY_KEY_ID", settings.KeyId)
@@ -361,7 +364,7 @@ namespace ClaudeRecovery
             UsbDisk target = disk;
             if (target == null) { ChooseDisk(); return; }
             string edition = Edition;
-            if (edition == "entreprise" && !settings.Complete && !EditSettings()) return;
+            if (edition == "business" && !settings.Complete && !EditSettings()) return;
             byte[] blob = Imaging.BuildBlob(BuildEnv(edition));
 
             if (!MessageDialog.Ask(this, L.T("Effacer cette clé ?", "Erase this key?"), EraseWarning(target, edition),
@@ -433,7 +436,7 @@ namespace ClaudeRecovery
         public Form Demo(string state)
         {
             if (state == "disk" || state == "confirm") disk = DemoDisk(62L * 1000 * 1000 * 1000);
-            if (state == "entreprise" || state == "settings")
+            if (state == "business" || state == "settings")
             {
                 disk = DemoDisk(62L * 1000 * 1000 * 1000);
                 segEdition.Selected = 1;

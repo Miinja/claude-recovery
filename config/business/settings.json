@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/opt/claude-recovery/hooks/log-command.sh"
+            "command": "/opt/ctrl-z/hooks/log-command.sh"
           }
         ]
       }

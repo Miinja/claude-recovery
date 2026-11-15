@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Builds the Claude Recovery live image (Debian live-build).
+# Builds the Ctrl-Z live image (Debian live-build).
 #
-#   sudo build/build-iso.sh entreprise     # business: technicians, logs sent to a server
-#   sudo build/build-iso.sh particulier    # personal: everything stays on the key
+#   sudo build/build-iso.sh business       # business: technicians, logs sent to a server
+#   sudo build/build-iso.sh personal       # personal: everything stays on the key
 #
 # Run as root on a Debian machine (apt install live-build git). In practice the GitHub
 # Actions workflow builds both editions on every vX.Y.Z tag and publishes them as a
 # release (.github/workflows/release.yml).
 #
-# Result: build/out/claude-recovery-<edition>.iso (+ .sha256).
+# Result: build/out/ctrl-z-<edition>.iso (+ .sha256).
 # The image embeds the repository as it is COMMITTED: commit before building.
 set -euo pipefail
 
@@ -19,8 +19,8 @@ ROOT="$(dirname "$HERE")"
 OUT="$HERE/out"
 
 case "$EDITION" in
-  entreprise|particulier) ;;
-  *) echo "Usage: $0 <entreprise|particulier>" >&2; exit 1 ;;
+  business|personal) ;;
+  *) echo "Usage: $0 <business|personal>" >&2; exit 1 ;;
 esac
 WORK="$HERE/work/$EDITION"
 
@@ -42,27 +42,27 @@ lb config \
   --binary-images iso-hybrid \
   --archive-areas "main contrib non-free non-free-firmware" \
   --debian-installer none \
-  --iso-application "Claude Recovery ($EDITION)" \
-  --iso-volume "CLAUDE_RECOVERY" \
-  --bootappend-live "boot=live components persistence persistence-encryption=none,luks username=recovery hostname=claude-recovery locales=fr_FR.UTF-8,en_US.UTF-8 keyboard-layouts=fr timezone=Europe/Paris quiet loglevel=3"
+  --iso-application "Ctrl-Z ($EDITION)" \
+  --iso-volume "CTRL_Z" \
+  --bootappend-live "boot=live components persistence persistence-encryption=none,luks username=recovery hostname=ctrl-z locales=fr_FR.UTF-8,en_US.UTF-8 keyboard-layouts=fr timezone=Europe/Paris quiet loglevel=3"
 
 # Packages
 grep -vE '^\s*(#|$)' "$HERE/packages.txt" > config/package-lists/recovery.list.chroot
 
-# Embedded repository: `claude-recovery-update` then does a git pull at every session
-mkdir -p config/includes.chroot/opt/claude-recovery
-rm -rf config/includes.chroot/opt/claude-recovery/repo
-git clone --quiet "$ROOT" config/includes.chroot/opt/claude-recovery/repo
-git -C config/includes.chroot/opt/claude-recovery/repo remote remove origin
+# Embedded repository: `ctrlz-update` then does a git pull at every session
+mkdir -p config/includes.chroot/opt/ctrl-z
+rm -rf config/includes.chroot/opt/ctrl-z/repo
+git clone --quiet "$ROOT" config/includes.chroot/opt/ctrl-z/repo
+git -C config/includes.chroot/opt/ctrl-z/repo remote remove origin
 
 # Edition and version of the image
-mkdir -p config/includes.chroot/usr/share/claude-recovery
-echo "$EDITION" > config/includes.chroot/usr/share/claude-recovery/edition
-echo "$VERSION" > config/includes.chroot/usr/share/claude-recovery/version
+mkdir -p config/includes.chroot/usr/share/ctrl-z
+echo "$EDITION" > config/includes.chroot/usr/share/ctrl-z/edition
+echo "$VERSION" > config/includes.chroot/usr/share/ctrl-z/version
 
 # The edition's Claude configuration in the profile (copied from /etc/skel on first boot)
 mkdir -p config/includes.chroot/etc/skel/.claude
-# (English by default; `claude-recovery` reinstalls the key's language at every session)
+# (English by default; `ctrlz` reinstalls the key's language at every session)
 cp "$ROOT/config/$EDITION/CLAUDE.en.md" config/includes.chroot/etc/skel/.claude/CLAUDE.md
 cp "$ROOT/config/$EDITION/settings.json" config/includes.chroot/etc/skel/.claude/
 
@@ -78,7 +78,7 @@ install -m 755 "$HERE/hooks/"*.hook.chroot config/hooks/normal/
 
 lb build
 
-iso="$OUT/claude-recovery-$EDITION.iso"
+iso="$OUT/ctrl-z-$EDITION.iso"
 mv ./*.iso "$iso"
-( cd "$OUT" && sha256sum "claude-recovery-$EDITION.iso" > "claude-recovery-$EDITION.iso.sha256" )
+( cd "$OUT" && sha256sum "ctrl-z-$EDITION.iso" > "ctrl-z-$EDITION.iso.sha256" )
 echo "Image ready: $iso ($VERSION)"

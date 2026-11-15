@@ -8,7 +8,7 @@
 #
 # Texts are passed already translated: use "$(t "français" "English")".
 
-CR_UI_TITLE="${CR_UI_TITLE:-Claude Recovery}"
+CR_UI_TITLE="${CR_UI_TITLE:-Ctrl-Z}"
 
 cr_ui_fancy() {
   [ -z "${CR_PLAIN:-}" ] && [ -t 0 ] && [ -t 1 ] && command -v whiptail >/dev/null 2>&1

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Claude Recovery session launcher (the `claude-recovery` command on the key).
+# Ctrl-Z session launcher (the `ctrlz` command on the key).
 #
-#   claude-recovery              start a session
-#   claude-recovery lang fr|en   change the key's language
+#   ctrlz              start a session
+#   ctrlz lang fr|en   change the key's language
 #
 # A session:
 #   1. reads the installer's settings, asks for the language and the keyboard once
@@ -18,11 +18,11 @@ set -u
 # shellcheck source=scripts/lib.sh
 . "$(dirname "$(readlink -f "$0")")/lib.sh"
 # shellcheck disable=SC1091
-[ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
+[ -r /etc/ctrl-z/config.env ] && . /etc/ctrl-z/config.env
 
 reload_config() {
   # shellcheck disable=SC1091
-  [ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
+  [ -r /etc/ctrl-z/config.env ] && . /etc/ctrl-z/config.env
   CR_LANG="$(cr_lang)"
   export RECOVERY_LANG CR_LANG
   cr_use_locale
@@ -31,7 +31,7 @@ reload_config() {
 # --- Language switch ------------------------------------------------------------
 if [ "${1:-}" = "lang" ]; then
   if ! cr_set_lang "${2:-}"; then
-    echo "Usage: claude-recovery lang fr|en"
+    echo "Usage: ctrlz lang fr|en"
     exit 1
   fi
   RECOVERY_LANG="$2"
@@ -42,10 +42,10 @@ if [ "${1:-}" = "lang" ]; then
 fi
 
 # --- Installer settings: read before any question (they set the language) --------
-if [ -z "${RECOVERY_LANG:-}" ] && ! mountpoint -q /etc/claude-recovery; then
+if [ -z "${RECOVERY_LANG:-}" ] && ! mountpoint -q /etc/ctrl-z; then
   sudo "$CR_REPO/scripts/firstboot.sh" --settings-only
   # shellcheck disable=SC1091
-  [ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
+  [ -r /etc/ctrl-z/config.env ] && . /etc/ctrl-z/config.env
 fi
 
 # --- Language: asked once, unless the installer set it ---------------------------
@@ -76,7 +76,7 @@ fi
 cr_apply_keymap "$RECOVERY_KEYMAP"
 
 EDITION="$(cr_edition)"
-STATE="${HOME}/.config/claude-recovery"
+STATE="${HOME}/.config/ctrl-z"
 mkdir -p "$STATE"
 
 # --- Network -----------------------------------------------------------------------
@@ -99,19 +99,19 @@ if ! cr_online 12; then
 fi
 
 # --- First boot: persistence ---------------------------------------------------------
-mountpoint -q /etc/claude-recovery || sudo RECOVERY_LANG="$RECOVERY_LANG" "$CR_REPO/scripts/firstboot.sh"
+mountpoint -q /etc/ctrl-z || sudo RECOVERY_LANG="$RECOVERY_LANG" "$CR_REPO/scripts/firstboot.sh"
 "$CR_REPO/scripts/update.sh"
 reload_config
 
 echo
-if [ "$EDITION" = "entreprise" ]; then
-  t "=== Claude Recovery — édition entreprise ===" "=== Claude Recovery — business edition ==="
+if [ "$EDITION" = "business" ]; then
+  t "=== Ctrl-Z — édition entreprise ===" "=== Ctrl-Z — business edition ==="
 else
-  t "=== Claude Recovery — édition particulier ===" "=== Claude Recovery — personal edition ==="
+  t "=== Ctrl-Z — édition particulier ===" "=== Ctrl-Z — personal edition ==="
 fi
 
 # --- Who and what --------------------------------------------------------------------
-if [ "$EDITION" = "entreprise" ]; then
+if [ "$EDITION" = "business" ]; then
   last_tech="$(cat "$STATE/technician" 2>/dev/null || true)"
   ui_input tech "$(t "Technicien :" "Technician:")" "$last_tech" || exit 1
   [ -n "$tech" ] || { t "Nom du technicien obligatoire." "The technician's name is required."; exit 1; }
@@ -203,7 +203,7 @@ else
       fi
     fi
     DEST="/dev/$dest"
-    jobs_dir="$jobs_dir/claude-recovery"
+    jobs_dir="$jobs_dir/ctrl-z"
     sudo mkdir -p "$jobs_dir" && sudo chown "$(id -u):$(id -g)" "$jobs_dir" 2>/dev/null
     break
   done
@@ -270,9 +270,9 @@ claude "$@"
 status=$?
 
 # --- Closing ---------------------------------------------------------------------------------
-[ "$EDITION" = "entreprise" ] || exit "$status"
+[ "$EDITION" = "business" ] || exit "$status"
 
-/opt/claude-recovery/hooks/log-command.sh --flush
+/opt/ctrl-z/hooks/log-command.sh --flush
 
 if [ -n "${RECOVERY_LOG_URL:-}" ] && [ -s "$job_dir/report.md" ]; then
   code="$(curl -s -o /dev/null -w '%{http_code}' -m 20 -X PUT \
@@ -287,7 +287,7 @@ if [ -n "${RECOVERY_LOG_URL:-}" ] && [ -s "$job_dir/report.md" ]; then
   esac
 fi
 
-log_dir="${RECOVERY_LOG_DIR:-/var/log/claude-recovery}"
+log_dir="${RECOVERY_LOG_DIR:-/var/log/ctrl-z}"
 if [ -s "$log_dir/queue.jsonl" ] || [ -s "$log_dir/queue.sending" ]; then
   t "Des journaux attendent encore sur la clé : ils partiront à la prochaine session connectée." \
     "Some logs are still waiting on the key: they will be sent at the next connected session."

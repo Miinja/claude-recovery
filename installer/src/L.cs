@@ -1,7 +1,7 @@
 // Interface language: French or English, chosen in the window.
 using System.Globalization;
 
-namespace ClaudeRecovery
+namespace CtrlZ
 {
     public static class L
     {

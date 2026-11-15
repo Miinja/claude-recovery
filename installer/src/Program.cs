@@ -1,10 +1,10 @@
-// Entry point of the Claude Recovery installer.
+// Entry point of the Ctrl-Z installer.
 using System;
 using System.IO;
 using System.Security.Principal;
 using System.Windows.Forms;
 
-namespace ClaudeRecovery
+namespace CtrlZ
 {
     static class Program
     {
@@ -59,7 +59,7 @@ namespace ClaudeRecovery
             {
                 MessageBox.Show(L.T("L'écriture d'une clé USB demande les droits d'administrateur.\nFaites un clic droit sur le programme, puis « Exécuter en tant qu'administrateur ».",
                                     "Writing a USB key requires administrator rights.\nRight-click the program, then \"Run as administrator\"."),
-                    "Claude Recovery", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    "Ctrl-Z", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return 1;
             }
             Application.Run(new MainForm());

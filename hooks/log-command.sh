@@ -11,9 +11,9 @@
 set -u
 
 # shellcheck disable=SC1091
-[ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
+[ -r /etc/ctrl-z/config.env ] && . /etc/ctrl-z/config.env
 
-LOG_DIR="${RECOVERY_LOG_DIR:-/var/log/claude-recovery}"
+LOG_DIR="${RECOVERY_LOG_DIR:-/var/log/ctrl-z}"
 SERVER_URL="${RECOVERY_LOG_URL:-}"
 TOKEN="${RECOVERY_LOG_TOKEN:-}"
 QUEUE="$LOG_DIR/queue.jsonl"        # entries not handled yet

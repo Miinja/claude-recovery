@@ -1,4 +1,6 @@
-# Claude Recovery
+# Ctrl-Z
+
+*Data recovery, powered by Claude Code.*
 
 **English** · [Français](README.fr.md)
 
@@ -22,9 +24,9 @@ files (ddrescue, testdisk, photorec, smartctl…) without ever writing to the or
 | Windows mode (diagnosing a software problem) | Yes, procedure for a non-specialist | Yes, technician procedure |
 | Updates | The project's GitHub repository | GitHub, or the company's own repository |
 
-The edition is fixed in the image (`particulier` = personal, `entreprise` = business).
+The edition is fixed in the image (`personal` or `business`).
 Both images are published in the
-[releases](https://github.com/Miinja/claude-recovery/releases).
+[releases](https://github.com/Miinja/ctrl-z/releases).
 
 ## Languages
 
@@ -35,8 +37,8 @@ the procedures Claude follows.
 - It can be changed at any time on the key:
 
 ```
-claude-recovery lang en
-claude-recovery lang fr
+ctrlz lang en
+ctrlz lang fr
 ```
 
 ## Requirements and recommendations
@@ -52,8 +54,8 @@ claude-recovery lang fr
   after it, hence the 4 GB minimum.
 - The space left after the image is split in two on first boot: the persistence
   (Claude sign-in, settings, logs; half of the free space, 16 GB at most) and the
-  `CR-WINDOWS` partition used by Windows mode. A 32 GB key gives about 14 GB of
-  persistence; from 64 GB up it stays at 16 GB and only `CR-WINDOWS` grows.
+  `CTRL-Z` partition used by Windows mode. A 32 GB key gives about 14 GB of
+  persistence; from 64 GB up it stays at 16 GB and only `CTRL-Z` grows.
 - The whole system is read from the key: on USB 2.0 it boots and runs, but slowly. Prefer
   a USB 3 key from a known brand, and plug it into a USB 3 port.
 - Use a key dedicated to this: it is completely erased, and it should not hold anything
@@ -97,7 +99,7 @@ drive.
 
 ### On Windows: the installer
 
-Download `ClaudeRecoveryInstaller.exe` from the latest release, run it, then:
+Download `CtrlZInstaller.exe` from the latest release, run it, then:
 
 1. choose the language and the edition;
 2. choose the USB key (it is completely erased);
@@ -109,10 +111,10 @@ Download `ClaudeRecoveryInstaller.exe` from the latest release, run it, then:
 
 | Option | What it does | Where to find the value |
 |---|---|---|
-| **FR / EN** | Language of the installer, of the messages on the key and of Claude's procedure | Your choice. Can be changed later on the key with `claude-recovery lang en` |
+| **FR / EN** | Language of the installer, of the messages on the key and of Claude's procedure | Your choice. Can be changed later on the key with `ctrlz lang en` |
 | **Personal / Business** | Which image is written | Personal: you recover your own files. Business: a technician works for customers and every command is logged |
 | **Select the USB key** | The disk that will be erased | Only USB disks are listed. A disk over 130 GB is flagged in red: check it is not a backup drive |
-| **Use a local file…** | Writes an `.iso` you already have instead of downloading the latest release | An image downloaded from the [releases](https://github.com/Miinja/claude-recovery/releases), or built with `build/build-iso.sh` |
+| **Use a local file…** | Writes an `.iso` you already have instead of downloading the latest release | An image downloaded from the [releases](https://github.com/Miinja/ctrl-z/releases), or built with `build/build-iso.sh` |
 | **Online help** | Opens this page | |
 
 Business edition settings (the "Fill in the settings…" link under the edition):
@@ -133,8 +135,8 @@ the key accepts it if the image was built with it (see [server/README.md](server
 ### On Linux
 
 ```
-sudo scripts/make-key.sh particulier /dev/sdX en
-sudo scripts/make-key.sh entreprise  /dev/sdX en
+sudo scripts/make-key.sh personal /dev/sdX en
+sudo scripts/make-key.sh business /dev/sdX en
 ```
 
 ### First boot
@@ -147,7 +149,7 @@ reboot later, the key is operational.
 ## Usage
 
 The assistant starts on its own when the key boots; everything is chosen with the arrow
-keys and Enter. To start it again after leaving it, type `claude-recovery`.
+keys and Enter. To start it again after leaving it, type `ctrlz`.
 
 1. **Language and keyboard**, asked once (the installer's language is used if there is
    one).
@@ -168,7 +170,7 @@ the key and is sent at the next connected session.
 
 ### Windows mode
 
-From the `CR-WINDOWS` partition of the key, in PowerShell:
+From the `CTRL-Z` partition of the key, in PowerShell:
 
 ```
 powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1
@@ -186,23 +188,23 @@ git push origin v0.1.0
 ```
 
 The `.github/workflows/release.yml` workflow builds both images and the installer, then
-creates the release. File names are fixed (`claude-recovery-particulier.iso`,
-`claude-recovery-entreprise.iso`, `ClaudeRecoveryInstaller.exe`): the installer and
+creates the release. File names are fixed (`ctrl-z-personal.iso`,
+`ctrl-z-business.iso`, `CtrlZInstaller.exe`): the installer and
 `make-key.sh` always fetch the latest release.
 
 ## Repository layout
 
 ```
 config/
-  entreprise/            Business edition: procedure (CLAUDE.<lang>.md), permissions, settings template
-  particulier/           Personal edition: procedure and permissions
+  business/              Business edition: procedure (CLAUDE.<lang>.md), permissions, settings template
+  personal/              Personal edition: procedure and permissions
   windows/               Windows mode: one procedure per edition and language, permissions
 hooks/
   log-command.sh         Logs every command Claude runs, with an offline queue
 scripts/
-  session.sh             Session launcher (the `claude-recovery` command)
+  session.sh             Session launcher (the `ctrlz` command)
   firstboot.sh           First boot: installer settings, persistence
-  update.sh              git pull + config install (the `claude-recovery-update` command)
+  update.sh              git pull + config install (the `ctrlz-update` command)
   lib.sh                 Shared functions (edition, language, settings block, disks)
   ui.sh                  The assistant's menus (whiptail, plain prompts as a fallback)
   make-key.sh            Creating a key from Linux

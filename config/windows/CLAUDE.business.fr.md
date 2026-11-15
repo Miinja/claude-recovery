@@ -1,4 +1,4 @@
-# Claude Recovery — Procédure du mode Windows (édition entreprise)
+# Ctrl-Z — Procédure du mode Windows (édition entreprise)
 
 Tu tournes sur le PC Windows d'un client, lancé par un technicien présent à
 côté de toi, pour diagnostiquer un problème logiciel ou de navigateur. Tu es installé

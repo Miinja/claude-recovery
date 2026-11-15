@@ -8,8 +8,8 @@
 
 ```bash
 # Sur le serveur, dans le dossier où vivent vos autres services
-git clone https://github.com/Miinja/claude-recovery.git
-cd claude-recovery/server
+git clone https://github.com/Miinja/ctrl-z.git
+cd ctrl-z/server
 
 cp .env.example .env            # noms de domaine, réseau Docker de Caddy
 cp tokens.example tokens.txt    # un jeton par clé : openssl rand -hex 32
@@ -35,14 +35,14 @@ docker compose exec -u git forgejo forgejo admin user create \
 
 Puis, dans l'interface (`https://<GIT_DOMAIN>`) :
 
-1. Créer l'organisation `atelier` et le dépôt privé `claude-recovery`.
+1. Créer l'organisation `atelier` et le dépôt privé `ctrl-z`.
 2. Créer un compte par clé (`cle01`, …) en **lecture seule** sur ce dépôt, et un jeton
    d'accès (droit `read:repository`) pour chacun. Ce jeton va dans `RECOVERY_GIT_URL`
-   sur la clé (`/etc/claude-recovery/config.env`).
+   sur la clé (`/etc/ctrl-z/config.env`).
 3. Depuis le poste de développement, pousser le dépôt :
 
 ```bash
-git remote add forgejo https://<GIT_DOMAIN>/atelier/claude-recovery.git
+git remote add forgejo https://<GIT_DOMAIN>/atelier/ctrl-z.git
 git push forgejo main
 ```
 

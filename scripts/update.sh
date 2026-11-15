@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Updates the key: git pull of the repository, then installs the procedure (in the
 # key's language), the permissions and the hooks of the edition. Run at the start of
-# every session by `claude-recovery` (and at boot by claude-recovery-update.service).
+# every session by `ctrlz` (and at boot by ctrlz-update.service).
 # Offline, the local version is kept.
 #
 #   update.sh                  update + install
 #   update.sh --install-only   install only (after a language change)
 #
-# Update source: RECOVERY_GIT_URL when it is set in /etc/claude-recovery/config.env,
+# Update source: RECOVERY_GIT_URL when it is set in /etc/ctrl-z/config.env,
 # otherwise the project's GitHub repository.
 set -u
 
 # shellcheck source=scripts/lib.sh
 . "$(dirname "$(readlink -f "$0")")/lib.sh"
 # shellcheck disable=SC1091
-[ -r /etc/claude-recovery/config.env ] && . /etc/claude-recovery/config.env
+[ -r /etc/ctrl-z/config.env ] && . /etc/ctrl-z/config.env
 
 EDITION="$(cr_edition)"
 CR_LANG="$(cr_lang)"
@@ -36,10 +36,10 @@ if [ "${1:-}" != "--install-only" ]; then
 fi
 
 # Install the edition's procedure, in the key's language
-mkdir -p "$CLAUDE_DIR" /opt/claude-recovery/hooks
+mkdir -p "$CLAUDE_DIR" /opt/ctrl-z/hooks
 install -m 644 "config/$EDITION/CLAUDE.$CR_LANG.md" "$CLAUDE_DIR/CLAUDE.md"
 install -m 644 "config/$EDITION/settings.json" "$CLAUDE_DIR/settings.json"
-install -m 755 hooks/*.sh /opt/claude-recovery/hooks/
+install -m 755 hooks/*.sh /opt/ctrl-z/hooks/
 
 # The deny rules are also installed as managed settings: they take precedence over
 # any local setting and cannot be lifted during a session.

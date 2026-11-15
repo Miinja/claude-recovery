@@ -8,8 +8,8 @@ To be deployed on a Linux server with Docker and Caddy.
 
 ```bash
 # On the server, in the folder where your other services live
-git clone https://github.com/Miinja/claude-recovery.git
-cd claude-recovery/server
+git clone https://github.com/Miinja/ctrl-z.git
+cd ctrl-z/server
 
 cp .env.example .env            # domain names, Caddy's Docker network
 cp tokens.example tokens.txt    # one token per key: openssl rand -hex 32
@@ -53,14 +53,14 @@ docker compose exec -u git forgejo forgejo admin user create \
 
 Then, in the web interface (`https://<GIT_DOMAIN>`):
 
-1. Create an organisation (e.g. `workshop`) and the private repository `claude-recovery`.
+1. Create an organisation (e.g. `workshop`) and the private repository `ctrl-z`.
 2. Create one account per key (`key01`, …) with **read-only** access to that repository,
    and an access token (`read:repository` scope) for each. That token goes into the
    "Update repository" field of the installer (`RECOVERY_GIT_URL` on the key).
 3. From your development machine, push the repository:
 
 ```bash
-git remote add forgejo https://<GIT_DOMAIN>/workshop/claude-recovery.git
+git remote add forgejo https://<GIT_DOMAIN>/workshop/ctrl-z.git
 git push forgejo main
 ```
 

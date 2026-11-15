@@ -1,4 +1,4 @@
-# Debian packages of the Claude Recovery live image
+# Debian packages of the Ctrl-Z live image
 # Recovery / diagnosis
 gddrescue
 testdisk

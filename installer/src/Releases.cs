@@ -6,7 +6,7 @@ using System.IO;
 using System.Net;
 using System.Web.Script.Serialization;
 
-namespace ClaudeRecovery
+namespace CtrlZ
 {
     public sealed class ReleaseImage
     {
@@ -18,9 +18,9 @@ namespace ClaudeRecovery
 
     public static class Releases
     {
-        public const string Repo = "Miinja/claude-recovery";
+        public const string Repo = "Miinja/ctrl-z";
         const string Api = "https://api.github.com/repos/" + Repo + "/releases/latest";
-        const string Agent = "ClaudeRecoveryInstaller";
+        const string Agent = "CtrlZInstaller";
 
         static Releases()
         {
@@ -29,7 +29,7 @@ namespace ClaudeRecovery
 
         public static string AssetName(string edition)
         {
-            return "claude-recovery-" + edition + ".iso";
+            return "ctrl-z-" + edition + ".iso";
         }
 
         static HttpWebRequest Request(string url)
@@ -88,7 +88,7 @@ namespace ClaudeRecovery
         /// </summary>
         public static string Download(ReleaseImage image, string edition, Action<string, long, long> progress)
         {
-            string dir = Path.Combine(Path.GetTempPath(), "ClaudeRecovery");
+            string dir = Path.Combine(Path.GetTempPath(), "CtrlZ");
             Directory.CreateDirectory(dir);
             string path = Path.Combine(dir, AssetName(edition));
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Claude Recovery - configuration update (git pull)
+Description=Ctrl-Z - configuration update (git pull)
 Wants=network-online.target
 After=network-online.target
 
@@ -7,7 +7,7 @@ After=network-online.target
 Type=oneshot
 User=recovery
 Environment=HOME=/home/recovery
-ExecStart=/opt/claude-recovery/repo/scripts/update.sh
+ExecStart=/opt/ctrl-z/repo/scripts/update.sh
 TimeoutStartSec=60
 
 [Install]

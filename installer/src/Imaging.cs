@@ -6,7 +6,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace ClaudeRecovery
+namespace CtrlZ
 {
     public static class Imaging
     {

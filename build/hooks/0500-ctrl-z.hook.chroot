@@ -1,10 +1,10 @@
 #!/bin/sh
 # live-build hook, run inside the image's chroot.
-# Installs Claude Code for all users and prepares /opt/claude-recovery.
+# Installs Claude Code for all users and prepares /opt/ctrl-z.
 set -e
 
-REPO=/opt/claude-recovery/repo
-EDITION="$(cat /usr/share/claude-recovery/edition)"
+REPO=/opt/ctrl-z/repo
+EDITION="$(cat /usr/share/ctrl-z/edition)"
 
 # Internal certificate authorities copied by build-iso.sh (build/ca/*.crt)
 update-ca-certificates
@@ -20,38 +20,38 @@ ln -sf /opt/claude/.local/bin/claude /usr/local/bin/claude
 /usr/local/bin/claude --version
 
 # --- Layout of the key --------------------------------------------------------
-mkdir -p /opt/claude-recovery/hooks /var/log/claude-recovery /etc/claude-recovery /etc/claude-code /mnt/jobs
+mkdir -p /opt/ctrl-z/hooks /var/log/ctrl-z /etc/ctrl-z /etc/claude-code /mnt/jobs
 chmod 755 "$REPO"/scripts/*.sh "$REPO"/hooks/*.sh
-install -m 755 "$REPO"/hooks/*.sh /opt/claude-recovery/hooks/
-ln -sf "$REPO/scripts/session.sh" /usr/local/bin/claude-recovery
-ln -sf "$REPO/scripts/update.sh"  /usr/local/bin/claude-recovery-update
+install -m 755 "$REPO"/hooks/*.sh /opt/ctrl-z/hooks/
+ln -sf "$REPO/scripts/session.sh" /usr/local/bin/ctrlz
+ln -sf "$REPO/scripts/update.sh"  /usr/local/bin/ctrlz-update
 
 # Deny rules as managed settings from the very first boot (before any git pull)
 jq '{permissions: {deny: .permissions.deny}}' \
   "$REPO/config/$EDITION/settings.json" > /etc/claude-code/managed-settings.json
 
-# The live user (uid 1000, created at boot by live-config) owns /opt/claude-recovery
-chown -R 1000:1000 /opt/claude-recovery /var/log/claude-recovery /mnt/jobs
+# The live user (uid 1000, created at boot by live-config) owns /opt/ctrl-z
+chown -R 1000:1000 /opt/ctrl-z /var/log/ctrl-z /mnt/jobs
 
 # --- Update at boot ----------------------------------------------------------
-install -m 644 "$REPO/scripts/claude-recovery-update.service" /etc/systemd/system/
-systemctl enable claude-recovery-update.service
+install -m 644 "$REPO/scripts/ctrlz-update.service" /etc/systemd/system/
+systemctl enable ctrlz-update.service
 
 # Welcome message
 cat > /etc/motd <<EOF
 
-  Claude Recovery — $EDITION ($(cat /usr/share/claude-recovery/version))
-  Type  claude-recovery  to start again.   /   Tapez  claude-recovery  pour relancer.
+  Ctrl-Z — $EDITION ($(cat /usr/share/ctrl-z/version)) — powered by Claude Code
+  Type  ctrlz  to start again.   /   Tapez  ctrlz  pour relancer.
 
 EOF
 
 # The assistant starts by itself on the first console, once per boot: nobody has to
 # type a command to get going. Leaving it drops to the shell.
-cat > /etc/profile.d/claude-recovery.sh <<'EOF'
-if [ -z "${CR_AUTOSTARTED:-}" ] && [ "$(id -u)" = "1000" ] && [ "$(tty 2>/dev/null)" = "/dev/tty1" ]    && [ ! -e /run/user/1000/claude-recovery.started ]; then
+cat > /etc/profile.d/ctrl-z.sh <<'EOF'
+if [ -z "${CR_AUTOSTARTED:-}" ] && [ "$(id -u)" = "1000" ] && [ "$(tty 2>/dev/null)" = "/dev/tty1" ]    && [ ! -e /run/user/1000/ctrl-z.started ]; then
   export CR_AUTOSTARTED=1
-  : > /run/user/1000/claude-recovery.started 2>/dev/null || true
-  claude-recovery
+  : > /run/user/1000/ctrl-z.started 2>/dev/null || true
+  ctrlz
 fi
 EOF
-chmod 644 /etc/profile.d/claude-recovery.sh
+chmod 644 /etc/profile.d/ctrl-z.sh

@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
-namespace ClaudeRecovery
+namespace CtrlZ
 {
     public sealed class UsbDisk
     {

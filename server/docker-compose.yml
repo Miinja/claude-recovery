@@ -1,4 +1,4 @@
-# Claude Recovery services on the company's server (business edition):
+# Ctrl-Z services on the company's server (business edition):
 #   forgejo       configuration repository pulled by the keys (git pull at every session)
 #   log-receiver  receives the session logs and the job reports
 #

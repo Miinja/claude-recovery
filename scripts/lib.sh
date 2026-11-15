@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 # Functions shared by the key's scripts. Source it with `.`, do not run it.
 
-CR_REPO="${CR_REPO:-/opt/claude-recovery/repo}"
-CR_DEFAULT_GIT_URL="https://github.com/Miinja/claude-recovery.git"
-CR_CONFIG="/etc/claude-recovery/config.env"
+CR_REPO="${CR_REPO:-/opt/ctrl-z/repo}"
+CR_DEFAULT_GIT_URL="https://github.com/Miinja/ctrl-z.git"
+CR_CONFIG="/etc/ctrl-z/config.env"
 
 # Edition of the key: fixed in the image when it is built.
 cr_edition() {
   local e
-  e="$(cat /usr/share/claude-recovery/edition 2>/dev/null || true)"
+  e="$(cat /usr/share/ctrl-z/edition 2>/dev/null || true)"
   case "$e" in
-    entreprise|particulier) echo "$e" ;;
-    *) echo "entreprise" ;;
+    business|personal) echo "$e" ;;
+    *) echo "business" ;;
   esac
 }
 
 # --- Settings block --------------------------------------------------------------
 # The installer cannot create a Linux partition from Windows. It therefore drops the
-# settings (the future /etc/claude-recovery/config.env) in a small raw block right
+# settings (the future /etc/ctrl-z/config.env) in a small raw block right
 # after the image, on a 1 MiB boundary. On first boot the key reads it, creates its
 # persistence partition, stores the settings there and erases the block.
 #
@@ -85,8 +85,8 @@ cr_env_line() {
 }
 
 # --- Language ----------------------------------------------------------------------
-# RECOVERY_LANG (fr or en) comes from /etc/claude-recovery/config.env: written by the
-# installer, changed with `claude-recovery lang fr|en`. Failing that, the system
+# RECOVERY_LANG (fr or en) comes from /etc/ctrl-z/config.env: written by the
+# installer, changed with `ctrlz lang fr|en`. Failing that, the system
 # language is followed.
 cr_lang() {
   case "${RECOVERY_LANG:-}" in

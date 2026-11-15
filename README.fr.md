@@ -1,4 +1,6 @@
-# Claude Recovery
+# Ctrl-Z
+
+*La récupération de données, propulsée par Claude Code.*
 
 [English](README.md) · **Français**
 
@@ -24,8 +26,9 @@ sur le disque d'origine.
 | Mode Windows (diagnostic d'un bug logiciel) | Oui, procédure pour un non-spécialiste | Oui, procédure technicien |
 | Mises à jour | Dépôt GitHub du projet | Dépôt GitHub, ou le dépôt de l'entreprise |
 
-L'édition est fixée dans l'image. Les deux images sont publiées dans les
-[releases](https://github.com/Miinja/claude-recovery/releases).
+L'édition est fixée dans l'image (`personal` pour particulier, `business` pour
+entreprise). Les deux images sont publiées dans les
+[releases](https://github.com/Miinja/ctrl-z/releases).
 
 ## Langues
 
@@ -36,8 +39,8 @@ procédures que suit Claude.
 - Elle se change à tout moment sur la clé :
 
 ```
-claude-recovery lang fr
-claude-recovery lang en
+ctrlz lang fr
+ctrlz lang en
 ```
 
 ## Prérequis et recommandations
@@ -53,8 +56,8 @@ claude-recovery lang en
   elle, d'où le minimum de 4 Go.
 - L'espace qui reste après l'image est partagé en deux au premier démarrage : la
   persistance (connexion Claude, réglages, journaux ; la moitié de l'espace libre, 16 Go
-  au plus) et la partition `CR-WINDOWS` du mode Windows. Une clé de 32 Go donne environ
-  14 Go de persistance ; à partir de 64 Go elle reste à 16 Go et seule `CR-WINDOWS`
+  au plus) et la partition `CTRL-Z` du mode Windows. Une clé de 32 Go donne environ
+  14 Go de persistance ; à partir de 64 Go elle reste à 16 Go et seule `CTRL-Z`
   grandit.
 - Tout le système est lu depuis la clé : en USB 2.0 elle démarre et fonctionne, mais
   lentement. Préférez une clé USB 3 de marque connue, branchée sur un port USB 3.
@@ -104,7 +107,7 @@ troisième disque.
 
 ### Sous Windows : l'installeur
 
-Télécharger `ClaudeRecoveryInstaller.exe` depuis la dernière release, le lancer, puis :
+Télécharger `CtrlZInstaller.exe` depuis la dernière release, le lancer, puis :
 
 1. choisir la langue et l'édition ;
 2. choisir la clé USB (elle est entièrement effacée) ;
@@ -116,10 +119,10 @@ Télécharger `ClaudeRecoveryInstaller.exe` depuis la dernière release, le lanc
 
 | Option | Ce qu'elle fait | Où trouver la valeur |
 |---|---|---|
-| **FR / EN** | Langue de l'installeur, des messages de la clé et de la procédure de Claude | Au choix. Se change ensuite sur la clé avec `claude-recovery lang fr` |
+| **FR / EN** | Langue de l'installeur, des messages de la clé et de la procédure de Claude | Au choix. Se change ensuite sur la clé avec `ctrlz lang fr` |
 | **Particulier / Entreprise** | L'image qui sera écrite | Particulier : vous récupérez vos propres fichiers. Entreprise : un technicien intervient pour des clients et chaque commande est journalisée |
 | **Choisir la clé USB** | Le disque qui sera effacé | Seuls les disques USB sont proposés. Un disque de plus de 130 Go est signalé en rouge : vérifiez que ce n'est pas un disque de sauvegarde |
-| **Utiliser un fichier local…** | Écrit un `.iso` que vous avez déjà, au lieu de télécharger la dernière release | Une image téléchargée depuis les [releases](https://github.com/Miinja/claude-recovery/releases), ou construite avec `build/build-iso.sh` |
+| **Utiliser un fichier local…** | Écrit un `.iso` que vous avez déjà, au lieu de télécharger la dernière release | Une image téléchargée depuis les [releases](https://github.com/Miinja/ctrl-z/releases), ou construite avec `build/build-iso.sh` |
 | **Aide en ligne** | Ouvre cette page | |
 
 Réglages de l'édition entreprise (lien « Remplir les réglages… » sous l'édition) :
@@ -141,8 +144,8 @@ certificat ; la clé, elle, l'accepte si l'image a été construite avec (voir
 ### Sous Linux
 
 ```
-sudo scripts/make-key.sh particulier /dev/sdX fr
-sudo scripts/make-key.sh entreprise  /dev/sdX fr
+sudo scripts/make-key.sh personal /dev/sdX fr
+sudo scripts/make-key.sh business /dev/sdX fr
 ```
 
 ### Premier démarrage
@@ -155,7 +158,7 @@ journaux d'un démarrage à l'autre. Un redémarrage plus tard, la clé est opé
 ## Utilisation
 
 L'assistant démarre de lui-même avec la clé ; tout se choisit avec les flèches et Entrée.
-Pour le relancer après l'avoir quitté, taper `claude-recovery`.
+Pour le relancer après l'avoir quitté, taper `ctrlz`.
 
 1. **Langue et clavier**, demandés une seule fois (la langue de l'installeur est reprise
    s'il y en a une).
@@ -177,7 +180,7 @@ reste sur la clé et part à la prochaine session connectée.
 
 ### Mode Windows
 
-Depuis la partition `CR-WINDOWS` de la clé, dans PowerShell :
+Depuis la partition `CTRL-Z` de la clé, dans PowerShell :
 
 ```
 powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1
@@ -195,23 +198,23 @@ git push origin v0.1.0
 ```
 
 Le workflow `.github/workflows/release.yml` construit les deux images et l'installeur,
-puis crée la release. Les noms de fichiers sont fixes (`claude-recovery-particulier.iso`,
-`claude-recovery-entreprise.iso`, `ClaudeRecoveryInstaller.exe`) : l'installeur et
+puis crée la release. Les noms de fichiers sont fixes (`ctrl-z-personal.iso`,
+`ctrl-z-business.iso`, `CtrlZInstaller.exe`) : l'installeur et
 `make-key.sh` vont toujours chercher la dernière release.
 
 ## Arborescence
 
 ```
 config/
-  entreprise/            Édition entreprise : procédure (CLAUDE.<langue>.md), permissions, modèle de réglages
-  particulier/           Édition particulier : procédure et permissions
+  business/              Édition entreprise : procédure (CLAUDE.<langue>.md), permissions, modèle de réglages
+  personal/              Édition particulier : procédure et permissions
   windows/               Mode Windows : une procédure par édition et par langue, permissions
 hooks/
   log-command.sh         Journalise chaque commande de Claude, file d'attente hors ligne
 scripts/
-  session.sh             Lanceur de session (commande `claude-recovery`)
+  session.sh             Lanceur de session (commande `ctrlz`)
   firstboot.sh           Premier démarrage : réglages de l'installeur, persistance
-  update.sh              git pull + installation de la config (commande `claude-recovery-update`)
+  update.sh              git pull + installation de la config (commande `ctrlz-update`)
   lib.sh                 Fonctions communes (édition, langue, bloc de réglages, disques)
   ui.sh                  Menus de l'assistant (whiptail, questions simples en secours)
   make-key.sh            Création d'une clé depuis Linux

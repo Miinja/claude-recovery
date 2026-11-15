@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claude Recovery log receiver (standard library only).
+"""Ctrl-Z log receiver (standard library only).
 
   GET  /healthz                   service status
   POST /api/logs                  JSON lines (NDJSON), one per command
@@ -55,7 +55,7 @@ def job_name(value):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "claude-recovery-logs/1"
+    server_version = "ctrl-z-logs/1"
 
     def reply(self, code, payload):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")

@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
-namespace ClaudeRecovery
+namespace CtrlZ
 {
     public static class Theme
     {
@@ -247,7 +247,7 @@ namespace ClaudeRecovery
             MaximizeBox = false; MinimizeBox = false; ShowInTaskbar = false; ShowIcon = false;
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(Theme.S(width), Theme.S(height));
-            Text = "Claude Recovery";
+            Text = "Ctrl-Z";
             Heading.Text = title;
             Heading.Font = Theme.Semi(13f);
             Heading.ForeColor = Theme.Text;

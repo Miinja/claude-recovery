@@ -4,7 +4,7 @@
 #   git tag v0.1.0 && git push origin v0.1.0
 #
 # The published file names are fixed: the installer and make-key.sh always download
-# .../releases/latest/download/claude-recovery-<edition>.iso
+# .../releases/latest/download/ctrl-z-<edition>.iso
 name: Release
 
 on:
@@ -23,7 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        edition: [entreprise, particulier]
+        edition: [business, personal]
     container:
       image: debian:trixie
       # live-build mounts /proc, /sys and /dev in the chroot it builds
@@ -45,7 +45,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: iso-${{ matrix.edition }}
-          path: build/out/claude-recovery-${{ matrix.edition }}.iso*
+          path: build/out/ctrl-z-${{ matrix.edition }}.iso*
           compression-level: 0
           retention-days: 3
 
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: installer
-          path: installer/out/ClaudeRecoveryInstaller.exe
+          path: installer/out/CtrlZInstaller.exe
           retention-days: 3
 
   release:
@@ -87,6 +87,6 @@ jobs:
           else
             gh release create "$TAG" dist/* \
               --repo "$GITHUB_REPOSITORY" \
-              --title "Claude Recovery $TAG" \
+              --title "Ctrl-Z $TAG" \
               --generate-notes
           fi

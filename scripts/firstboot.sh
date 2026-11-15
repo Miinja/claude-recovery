@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # First boot of a key: reads the settings left by the installer, then creates on the
 # key itself the persistence partition (remembered Claude sign-in, settings, logs) and
-# the "CR-WINDOWS" partition used by Windows mode.
+# the "CTRL-Z" partition used by Windows mode.
 #
-# Started by `claude-recovery` (through sudo) as long as the persistence is not active.
+# Started by `ctrlz` (through sudo) as long as the persistence is not active.
 # It only touches the key the system booted from, and only its free space.
 #
 #   firstboot.sh                   full first boot
@@ -17,7 +17,7 @@ CR_LANG="$(cr_lang)"
 [ "$(id -u)" -eq 0 ] || { t "firstboot : à lancer en root." "firstboot: must be run as root." >&2; exit 1; }
 
 # Persistence already active: nothing to do.
-mountpoint -q /etc/claude-recovery && exit 0
+mountpoint -q /etc/ctrl-z && exit 0
 
 EDITION="$(cr_edition)"
 PERSIST_SIZE_MIB="${PERSIST_SIZE_MIB:-16384}"
@@ -189,20 +189,20 @@ MNT="$(mktemp -d)"
 mount "$TARGET" "$MNT"
 cat > "$MNT/persistence.conf" <<'EOF'
 /home
-/etc/claude-recovery
-/opt/claude-recovery
-/var/log/claude-recovery
+/etc/ctrl-z
+/opt/ctrl-z
+/var/log/ctrl-z
 EOF
 # Current settings (installer, language, keyboard): they will be there at the next boot.
 if [ -f "$CR_CONFIG" ]; then
-  install -D -m 600 -o 1000 -g 1000 "$CR_CONFIG" "$MNT/etc/claude-recovery/config.env"
+  install -D -m 600 -o 1000 -g 1000 "$CR_CONFIG" "$MNT/etc/ctrl-z/config.env"
 fi
 sync; umount "$MNT"; rmdir "$MNT"
 [ "$LUKS" = 1 ] && cryptsetup close cr-persistence
 # The settings block holds tokens: erase it as soon as they are in the persistence.
 [ -n "$BLOB_OFF" ] && cr_blob_erase "$DISK" "$BLOB_OFF"
 
-mkfs.exfat -L CR-WINDOWS "$WINPART" >/dev/null
+mkfs.exfat -L CTRL-Z "$WINPART" >/dev/null
 WMNT="$(mktemp -d)"
 mount "$WINPART" "$WMNT"
 mkdir -p "$WMNT/config"
@@ -212,12 +212,12 @@ echo "$EDITION" > "$WMNT/windows/edition.txt"
 echo "$CR_LANG" > "$WMNT/windows/lang.txt"
 sync; umount "$WMNT"; rmdir "$WMNT"
 
-if ui_yesno "$(t "Persistance créée, ainsi que la partition CR-WINDOWS (mode Windows).
+if ui_yesno "$(t "Persistance créée, ainsi que la partition CTRL-Z (mode Windows).
 
 Elle sera active au PROCHAIN démarrage de la clé : la connexion au compte Claude ne sera mémorisée qu'à partir de là.
 
 Redémarrer maintenant ?" \
-"Persistence created, along with the CR-WINDOWS partition (Windows mode).
+"Persistence created, along with the CTRL-Z partition (Windows mode).
 
 It becomes active at the NEXT boot of the key: the Claude account sign-in is only remembered from then on.
 

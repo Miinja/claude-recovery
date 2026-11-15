@@ -2,7 +2,7 @@
 # (.NET Framework 4.x): no SDK to install, and the exe runs as is on Windows 10
 # and 11.
 #
-#   .\installer\build.ps1                      -> installer\out\ClaudeRecoveryInstaller.exe
+#   .\installer\build.ps1                      -> installer\out\CtrlZInstaller.exe
 #   .\installer\build.ps1 -Version v0.1.0
 #   .\installer\build.ps1 -NoElevation         -> test build, without the elevation prompt
 
@@ -20,10 +20,10 @@ if (-not (Test-Path $csc)) { throw "Compiler not found: $csc" }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 $safe = $Version -replace '[^A-Za-z0-9._-]', ''
 $info = Join-Path $out 'BuildInfo.cs'
-"namespace ClaudeRecovery { static class BuildInfo { public const string Version = `"$safe`"; } }" |
+"namespace CtrlZ { static class BuildInfo { public const string Version = `"$safe`"; } }" |
     Set-Content -Path $info -Encoding UTF8
 
-$name = if ($NoElevation) { 'ClaudeRecoveryInstaller-test.exe' } else { 'ClaudeRecoveryInstaller.exe' }
+$name = if ($NoElevation) { 'CtrlZInstaller-test.exe' } else { 'CtrlZInstaller.exe' }
 $exe  = Join-Path $out $name
 $cscArgs = @(
     '/nologo', '/target:winexe', '/optimize+', '/codepage:65001', '/platform:anycpu',

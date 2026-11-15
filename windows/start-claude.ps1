@@ -1,4 +1,4 @@
-# Claude Recovery - Windows mode
+# Ctrl-Z - Windows mode
 #
 # Diagnoses a software or browser problem on Windows, then cleans up completely.
 #
@@ -42,14 +42,14 @@ if (-not $Lang) {
 }
 function T([string]$fr, [string]$en) { if ($Lang -eq 'fr') { return $fr } else { return $en } }
 
-$Edition = Read-KeyFile 'edition.txt' @('entreprise', 'particulier') 'entreprise'
+$Edition = Read-KeyFile 'edition.txt' @('business', 'personal') 'business'
 
 Write-Host ''
-Write-Host (T '=== Claude Recovery - mode Windows ===' '=== Claude Recovery - Windows mode ===') -ForegroundColor Cyan
-if ($Edition -eq 'entreprise') { Write-Host (T 'Edition : entreprise' 'Edition: business') }
+Write-Host (T '=== Ctrl-Z - mode Windows ===' '=== Ctrl-Z - Windows mode ===') -ForegroundColor Cyan
+if ($Edition -eq 'business') { Write-Host (T 'Edition : entreprise' 'Edition: business') }
 else { Write-Host (T 'Edition : particulier' 'Edition: personal') }
 
-if ($Edition -eq 'entreprise') {
+if ($Edition -eq 'business') {
     if (-not $Technician) { $Technician = Read-Host (T 'Technicien' 'Technician') }
     if (-not $Technician) { Write-Host (T 'Nom du technicien obligatoire.' "The technician's name is required."); exit 1 }
     if (-not $Job) { $Job = Read-Host (T 'Reference du job (ex. dupont-pc)' 'Job reference (e.g. smith-pc)') }
@@ -62,7 +62,7 @@ if (-not $Job) { Write-Host (T 'Reference obligatoire.' 'A reference is required
 $Job = '{0}_{1}' -f (Get-Date -Format 'yyyy-MM-dd'), $Job
 
 # --- Folders ----------------------------------------------------------------
-$Session   = Join-Path $env:TEMP ('claude-recovery-' + [guid]::NewGuid().ToString('N'))
+$Session   = Join-Path $env:TEMP ('ctrl-z-' + [guid]::NewGuid().ToString('N'))
 $ConfigDir = Join-Path $Session 'config'
 $WorkDir   = Join-Path $Session 'work'
 $Journal   = Join-Path $PSScriptRoot 'journal'
@@ -118,7 +118,7 @@ try {
 
     Write-Host ''
     Write-Host "Job : $Job"
-    if ($Edition -eq 'entreprise') {
+    if ($Edition -eq 'business') {
         Write-Host ((T 'Technicien : ' 'Technician: ') + $Technician)
         Write-Host (T 'Connectez-vous au compte Claude de votre entreprise quand Claude le demande.' "Sign in to your company's Claude account when Claude asks.")
     } else {
