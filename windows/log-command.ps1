@@ -17,7 +17,8 @@ try {
         session = $call.session_id
         cwd     = $call.cwd
         tool    = $call.tool_name
-        command = $call.tool_input.command
+        # A BitLocker recovery key (8 groups of 6 digits) never reaches a log.
+        command = ([string]$call.tool_input.command) -replace '\d{6}([- ]?\d{6}){7}', '[recovery key removed]'
     }
 
     if ($env:RECOVERY_JOURNAL) {

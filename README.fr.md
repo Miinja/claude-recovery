@@ -165,18 +165,59 @@ Pour le relancer après l'avoir quitté, taper `ctrlz`.
 2. **Réseau** : un câble est détecté tout seul ; sinon un menu liste les réseaux Wi-Fi et
    demande le mot de passe.
 3. **Mise à jour** de la clé (`git pull`).
-4. **Disque à récupérer**, choisi dans une liste qui affiche taille, modèle, connexion et
+4. **Objectif** : récupérer des fichiers, ou diagnostiquer un Windows qui ne démarre plus
+   (voir [Diagnostic Windows](#diagnostic-windows)).
+5. **Disque à récupérer**, choisi dans une liste qui affiche taille, modèle, connexion et
    numéro de série. Il est aussitôt **verrouillé en lecture seule dans le noyau** : plus
    aucune commande ne peut y écrire, et un montage se fait en lecture seule.
-5. **Destination**, choisie parmi les partitions des autres disques. La clé et le disque à
+6. **Destination**, choisie parmi les partitions des autres disques. La clé et le disque à
    récupérer ne sont pas proposés, et une destination trop petite pour un clone complet
    est signalée.
-6. Claude Code démarre dans le dossier du job. Les choix ci-dessus lui sont transmis comme
+7. Claude Code démarre dans le dossier du job. Les choix ci-dessus lui sont transmis comme
    des faits, dans un fichier `CLAUDE.md` écrit dans ce dossier.
 
 En édition entreprise, l'assistant demande aussi le technicien et la référence du job ; à
 la fermeture, les journaux en attente et `report.md` partent au serveur. Hors ligne, tout
 reste sur la clé et part à la prochaine session connectée.
+
+### Diagnostic Windows
+
+Pour un PC dont le Windows ne démarre plus, boucle sur la « réparation automatique », fait
+des écrans bleus ou plante. **Cette première version diagnostique et recommande ; elle ne
+répare rien.** Le disque Windows reste verrouillé en lecture seule pendant toute la session.
+
+1. **BitLocker** : une partition chiffrée est signalée avec ses protections (TPM, mot de
+   passe, clé de récupération). Le lanceur propose de saisir la clé de récupération
+   (48 chiffres) pour l'ouvrir **en lecture seule**. La clé passe du lanceur à
+   `cryptsetup` par l'entrée standard : elle n'est jamais montrée à Claude, jamais
+   enregistrée, absente de la ligne de commande et des journaux (une clé de récupération
+   qui apparaîtrait dans une commande journalisée est remplacée par
+   `[recovery key removed]`).
+2. **Inventaire** (`scripts/windows-detect.sh`), sans Claude, en quelques secondes :
+   version et build de Windows, nom du PC, dernier arrêt, démarrage UEFI ou BIOS,
+   partition EFI et `bootmgfw.efi`, entrées du BCD et partition visée par chacune (une
+   entrée qui ne pointe vers aucune partition du disque est signalée), WinRE, veille
+   prolongée ou démarrage rapide, mise à jour en attente, journal de la réparation
+   automatique, vidages d'écran bleu, volume NTFS marqué « à vérifier », état SMART. Les
+   partitions sont montées en lecture seule sous `/mnt/windows/`. Le rapport va dans
+   `windows/inventory.md` et son résumé dans le `CLAUDE.md` remis à Claude.
+3. **Diagnostic avec Claude** : symptômes, santé du disque, extrait des journaux
+   d'événements (`ctrlz events <dossier>` : erreurs et événements connus — redémarrages
+   inattendus, codes d'arrêt, erreurs disque et NTFS, erreurs matérielles WHEA, services
+   et mises à jour en échec), registre en lecture seule (`hivexget`, `reglookup`),
+   `SrtTrail.txt`, pilotes récents.
+4. **Conclusion** dans `windows/diagnostic.md` : preuves, cause probable et degré de
+   certitude, réparations classées de la moins risquée à la plus lourde, chacune avec la
+   commande exacte à taper dans l'environnement de récupération de Windows (`chkdsk`,
+   `sfc /offwindir`, `DISM /Image`, `bcdboot`…). La personne décide et les lance ; une
+   sauvegarde d'abord si les fichiers n'en ont pas.
+
+Le diagnostic n'a pas besoin de disque de destination : il peut rester sur la clé
+(persistance).
+
+Lancer les réparations depuis la clé elle-même est l'étape suivante : par le WinRE du PC
+démarré dans une machine virtuelle, chaque lot de commandes validé par la personne, après
+une sauvegarde.
 
 ### Mode Windows
 
@@ -217,6 +258,9 @@ scripts/
   update.sh              git pull + installation de la config (commande `ctrlz-update`)
   lib.sh                 Fonctions communes (édition, langue, bloc de réglages, disques)
   ui.sh                  Menus de l'assistant (whiptail, questions simples en secours)
+  windows-detect.sh      Diagnostic Windows : inventaire en lecture seule des Windows d'un disque
+  windows-inspect.py     Lecture des ruches du registre, du BCD et des journaux (lecture seule)
+  bitlocker-open.sh      Ouvre une partition BitLocker en lecture seule, clé lue sur l'entrée standard
   make-key.sh            Création d'une clé depuis Linux
   update-keys.sh         Met à jour les clés branchées sur un poste, sans les démarrer
 build/
@@ -276,6 +320,8 @@ persistance, y range les réglages, puis efface le bloc.
 - [x] Mode Windows — lanceur testé sur un PC pour les deux éditions, avec un programme témoin à la place de Claude (configuration isolée, journal, rapport, nettoyage)
 - [ ] Mode Windows — une vraie session Claude sur le PC d'un client n'a **jamais été essayée**
 - [ ] Serveur de journaux et Forgejo — fichiers prêts dans `server/`, à déployer
+- [x] Diagnostic Windows — lanceur testé dans un conteneur `debian:trixie` sur un faux disque GPT (EFI, MSR, Windows, WinRE, BitLocker) : ruches du registre et BCD fabriqués pour le test, journaux d'événements exportés d'un vrai Windows 11 (environ 40 000 événements lus en 2 min 20 s), BitLocker ouvert en lecture seule avec les images de référence de cryptsetup (clé de récupération tapée avec des espaces, mauvaise clé refusée, mot de passe), clé retrouvée nulle part sur le disque ensuite, tous les périphériques toujours verrouillés en lecture seule
+- [ ] Diagnostic Windows — sur un vrai disque Windows, et avec une vraie session Claude, **jamais essayé** ; l'image n'a pas encore été reconstruite avec les nouveaux paquets
 
 ### Scénarios de récupération testés
 

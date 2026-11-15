@@ -14,6 +14,12 @@ xfsprogs
 f2fs-tools
 hfsprogs
 dislocker
+# Windows diagnosis (read-only): registry hives, BCD, event logs, firmware boot entries
+libhivex-bin
+python3-hivex
+python3-evtx
+reglookup
+efibootmgr
 mdadm
 lvm2
 cryptsetup

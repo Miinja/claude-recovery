@@ -6,6 +6,10 @@
     "deny": [
       "Bash(blockdev --setrw*)",
       "Bash(sudo blockdev --setrw*)",
+      "Bash(*bitlocker-open*)",
+      "Bash(*chntpw*)",
+      "Bash(*hivexregedit*--merge*)",
+      "Bash(*hivexsh*-w*)",
       "Bash(mkfs*)",
       "Bash(sudo mkfs*)",
       "Bash(wipefs*)",

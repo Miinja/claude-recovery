@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
 # Ctrl-Z session launcher (the `ctrlz` command on the key).
 #
-#   ctrlz              start a session
-#   ctrlz lang fr|en   change the key's language
+#   ctrlz                         start a session
+#   ctrlz lang fr|en              change the key's language
+#   ctrlz events <logs folder>    errors of a Windows installation's event logs
 #
 # A session:
 #   1. reads the installer's settings, asks for the language and the keyboard once
 #   2. gets the network up (cable, or Wi-Fi through a menu)
 #   3. first boot only: creates the persistence partition
 #   4. updates the key (git pull)
-#   5. has the disk to recover and the destination drive picked from a list; the disk
-#      to recover is locked read-only in the kernel before anything else touches it
-#   6. prepares the job folder on the destination and starts Claude Code in it
-#   7. on exit, business edition: sends the logs and the report to the server
+#   5. asks what the session is for: recover files, or diagnose a Windows installation
+#   6. has the disk and the destination drive picked from a list; the disk is locked
+#      read-only in the kernel before anything else touches it
+#   7. Windows diagnosis: unlocks BitLocker read-only if the person has the key, and
+#      takes a read-only inventory of the installation
+#   8. prepares the job folder on the destination and starts Claude Code in it
+#   9. on exit, business edition: sends the logs and the report to the server
 set -u
 
 # shellcheck source=scripts/lib.sh
@@ -39,6 +43,16 @@ if [ "${1:-}" = "lang" ]; then
   CR_LANG="$2"
   t "Langue de la clé : français." "Key language: English."
   exit 0
+fi
+
+# --- Event log extract (Windows diagnosis) ------------------------------------------
+if [ "${1:-}" = "events" ]; then
+  shift
+  CR_LANG="$(cr_lang)"
+  [ $# -gt 0 ] || { t "Usage : ctrlz events <dossier winevt/Logs ou fichier .evtx> [--days N]" \
+                      "Usage: ctrlz events <winevt/Logs folder or .evtx file> [--days N]"; exit 1; }
+  t "Lecture des journaux (une à trois minutes)…" "Reading the logs (one to three minutes)…" >&2
+  CR_LANG="$CR_LANG" exec python3 "$CR_REPO/scripts/windows-inspect.py" events "$@"
 fi
 
 # --- Installer settings: read before any question (they set the language) --------
@@ -110,6 +124,11 @@ else
   t "=== Ctrl-Z — édition particulier ===" "=== Ctrl-Z — personal edition ==="
 fi
 
+# --- What is this session for? -------------------------------------------------------
+ui_menu GOAL recover "$(t "Que voulez-vous faire ?" "What do you want to do?")" \
+  recover "$(t "Récupérer des fichiers (disque abîmé, fichiers effacés)" "Recover files (damaged disk, deleted files)")" \
+  windows "$(t "Diagnostiquer un Windows qui ne démarre plus ou plante" "Diagnose a Windows that no longer starts or crashes")" || exit 1
+
 # --- Who and what --------------------------------------------------------------------
 if [ "$EDITION" = "business" ]; then
   last_tech="$(cat "$STATE/technician" 2>/dev/null || true)"
@@ -119,8 +138,9 @@ if [ "$EDITION" = "business" ]; then
   ui_input ref "$(t "Référence du job (ex. dupont-hdd) :" "Job reference (e.g. smith-hdd):")" || exit 1
 else
   tech="personal"
-  ui_input ref "$(t "Donnez un nom à cette récupération :" "Give this recovery a name:")" "recovery" || exit 1
-  ref="${ref:-recovery}"
+  default_ref=recovery; [ "$GOAL" = windows ] && default_ref=windows
+  ui_input ref "$(t "Donnez un nom à cette intervention :" "Give this job a name:")" "$default_ref" || exit 1
+  ref="${ref:-$default_ref}"
 fi
 # Letters, digits, dot, dash, underscore: the name is used as a folder and as an identifier.
 ref="$(printf '%s' "$ref" | tr -c 'A-Za-z0-9._-' '-' | sed 's/^-*//; s/-*$//' | cut -c1-48)"
@@ -139,8 +159,14 @@ while :; do
   done < <(cr_list_disks "$KEY_DISK")
   items+=(rescan "$(t "Je viens de le brancher : actualiser la liste" "I just plugged it in: refresh the list")")
   items+=(none   "$(t "Aucun pour l'instant (fichier image, disque branché plus tard)" "None for now (image file, disk plugged in later)")")
-  ui_menu SOURCE "${items[0]}" "$(t "Quel est le disque À RÉCUPÉRER ? Il sera verrouillé en lecture seule." \
-                                    "Which disk is the one TO RECOVER? It will be locked read-only.")" "${items[@]}" || exit 1
+  if [ "$GOAL" = windows ]; then
+    question="$(t "Sur quel disque Windows est-il installé ? Il sera verrouillé en lecture seule : le diagnostic ne modifie rien." \
+                  "Which disk is Windows installed on? It will be locked read-only: the diagnosis changes nothing.")"
+  else
+    question="$(t "Quel est le disque À RÉCUPÉRER ? Il sera verrouillé en lecture seule." \
+                  "Which disk is the one TO RECOVER? It will be locked read-only.")"
+  fi
+  ui_menu SOURCE "${items[0]}" "$question" "${items[@]}" || exit 1
   [ "$SOURCE" = "rescan" ] || break
 done
 if [ "$SOURCE" = "none" ]; then
@@ -154,6 +180,39 @@ else
                "Could not lock /dev/$SOURCE read-only. Stopping, to be safe.")"
     exit 1
   fi
+fi
+
+# --- BitLocker (Windows diagnosis) ---------------------------------------------------------
+# An encrypted Windows partition can only be read with its key. The key is typed here,
+# in the launcher, and handed to the opening script on its standard input: it never
+# goes through Claude, the command line or the logs. The volume is opened read-only.
+if [ "$GOAL" = windows ] && [ -n "$SOURCE" ]; then
+  for part in $(lsblk -lnpo NAME "/dev/$SOURCE" | sed 1d); do
+    [ "$(sudo blkid -p -o value -s TYPE "$part" 2>/dev/null)" = BitLocker ] || continue
+    p="${part#/dev/}"
+    [ -b "/dev/mapper/ctrlz-bl-$p" ] && continue
+    while :; do
+      ui_yesno "$(t "La partition $p ($(lsblk -dno SIZE "$part" | tr -d ' ')) est chiffrée par BitLocker.
+
+Pour l'examiner, il faut sa clé de récupération (48 chiffres) : compte Microsoft (aka.ms/myrecoverykey), impression, clé USB ou administrateur informatique.
+
+Saisir la clé maintenant ? Elle sert uniquement à ouvrir la partition en lecture seule ; elle n'est ni enregistrée ni transmise à Claude." \
+"Partition $p ($(lsblk -dno SIZE "$part" | tr -d ' ')) is encrypted with BitLocker.
+
+Reading it needs its recovery key (48 digits): Microsoft account (aka.ms/myrecoverykey), printout, USB stick or IT administrator.
+
+Enter the key now? It is only used to open the partition read-only; it is neither stored nor given to Claude.")" || break
+      ui_password bl_key "$(t "Clé de récupération de $p :" "Recovery key of $p:")" || break
+      if printf '%s\n' "$bl_key" | sudo "$CR_REPO/scripts/bitlocker-open.sh" "$p"; then
+        bl_key=""
+        t "$p : ouverte en lecture seule." "$p: opened read-only."
+        break
+      fi
+      bl_key=""
+      ui_msg "$(t "Cette clé n'ouvre pas $p. Vérifiez-la (l'identifiant de clé affiché par Windows doit correspondre)." \
+                 "This key does not open $p. Check it (the key ID shown by Windows must match).")"
+    done
+  done
 fi
 
 # --- Destination -------------------------------------------------------------------------
@@ -175,12 +234,25 @@ else
     done < <(cr_list_destinations "$KEY_DISK" "$SOURCE")
     items+=(rescan "$(t "Je viens de le brancher : actualiser la liste" "I just plugged it in: refresh the list")")
     items+=(folder "$(t "Autre : indiquer un dossier déjà monté" "Other: give a folder that is already mounted")")
-    ui_menu dest "${items[0]}" "$(t "Où ranger ce qui sera récupéré ? Choisissez la partition du disque de DESTINATION. Elle ne sera pas effacée : un dossier y est ajouté." \
-                                   "Where should the recovered data go? Pick the partition of the DESTINATION drive. It is not erased: a folder is added to it.")" "${items[@]}" || exit 1
+    if [ "$GOAL" = windows ]; then
+      # A diagnosis only produces reports: the key's persistence is enough.
+      items=(key "$(t "Sur la clé elle-même (diagnostic seul, pas de copie du disque)" "On the key itself (diagnosis only, no copy of the disk)")" "${items[@]}")
+      question="$(t "Où ranger le diagnostic ? Sur la clé suffit ; un disque de DESTINATION sera nécessaire pour sauvegarder le disque avant toute réparation." \
+                    "Where should the diagnosis be kept? The key is enough; a DESTINATION drive will be needed to back up the disk before any repair.")"
+    else
+      question="$(t "Où ranger ce qui sera récupéré ? Choisissez la partition du disque de DESTINATION. Elle ne sera pas effacée : un dossier y est ajouté." \
+                    "Where should the recovered data go? Pick the partition of the DESTINATION drive. It is not erased: a folder is added to it.")"
+    fi
+    ui_menu dest "${items[0]}" "$question" "${items[@]}" || exit 1
     case "$dest" in
       rescan) continue ;;
       folder)
         ui_input jobs_dir "$(t "Dossier de destination :" "Destination folder:")" "$jobs_dir" || exit 1
+        break ;;
+      key)
+        jobs_dir="$HOME/ctrl-z-jobs"
+        mkdir -p "$jobs_dir"
+        ON_KEY=1
         break ;;
     esac
     ui_yesno "$(t "/dev/$dest va être ouverte en écriture. Est-ce bien le disque de DESTINATION, et pas celui que vous voulez récupérer ?" \
@@ -191,7 +263,7 @@ else
       continue
     fi
     # The first step of a recovery is a full clone of the disk: it has to fit.
-    if [ -n "$SOURCE" ]; then
+    if [ -n "$SOURCE" ] && [ "$GOAL" = recover ]; then
       need="$(lsblk -bdno SIZE "/dev/$SOURCE")"
       free="$(df -B1 --output=avail "$jobs_dir" | tail -n 1 | tr -d ' ')"
       if [ "${free:-0}" -lt "${need:-0}" ]; then
@@ -214,7 +286,10 @@ if [ ! -d "$jobs_dir" ]; then
     "The folder $jobs_dir does not exist. Mount the destination drive, then start again."
   exit 1
 fi
-if [ "$(stat -f -c %T "$jobs_dir")" = "overlayfs" ]; then
+if [ -n "${ON_KEY:-}" ]; then
+  mountpoint -q /etc/ctrl-z || ui_msg "$(t "Pas de persistance active : le diagnostic restera en mémoire et sera perdu à l'arrêt du PC." \
+                                         "No active persistence: the diagnosis stays in memory and is lost when the PC shuts down.")"
+elif [ "$(stat -f -c %T "$jobs_dir")" = "overlayfs" ]; then
   ui_yesno "$(t "ATTENTION : $jobs_dir est sur la clé (mémoire vive), pas sur un disque de destination. Continuer quand même ?" \
                "WARNING: $jobs_dir is on the key (in memory), not on a destination drive. Continue anyway?")" no || exit 1
 fi
@@ -225,9 +300,22 @@ if [ -n "$job_dir" ]; then
   t "Reprise : $job_dir" "Resuming: $job_dir"
 else
   job_dir="$jobs_dir/$(date +%F)_$ref"
-  mkdir -p "$job_dir"/{image,work,recovered} \
+  if [ "$GOAL" = windows ]; then subdirs=(windows); else subdirs=(image work recovered); fi
+  mkdir -p "${subdirs[@]/#/$job_dir/}" \
     || { t "Création impossible dans $jobs_dir." "Could not create a folder in $jobs_dir."; exit 1; }
   t "Nouveau dossier : $job_dir" "New folder: $job_dir"
+fi
+
+# --- Windows inventory ------------------------------------------------------------------------
+# Read-only: the disk is locked. Partitions are mounted read-only under /mnt/windows.
+WIN_SUMMARY=""
+if [ "$GOAL" = windows ] && [ -n "$SOURCE" ]; then
+  t "Inventaire de Windows sur /dev/$SOURCE (lecture seule)…" "Inventory of Windows on /dev/$SOURCE (read-only)…"
+  if WIN_SUMMARY="$(sudo RECOVERY_LANG="$RECOVERY_LANG" "$CR_REPO/scripts/windows-detect.sh" "$SOURCE" "$job_dir/windows")"; then
+    printf '%s\n' "$WIN_SUMMARY" | sed 's/^/  /'
+  else
+    WIN_SUMMARY="- $(t "L'inventaire a échoué : à refaire avec Claude." "The inventory failed: to be redone with Claude.")"
+  fi
 fi
 
 # --- Facts of this session, for Claude ----------------------------------------------------
@@ -248,6 +336,20 @@ fi
     "- **Destination**: ${DEST:-$jobs_dir}, working folder \`$job_dir\` ($(df -h --output=avail "$job_dir" | tail -n 1 | tr -d ' ') free)."
   [ -n "$KEY_DISK" ] && t "- **Clé de démarrage** : \`/dev/$KEY_DISK\`. Ni source ni destination." \
                           "- **Boot key**: \`/dev/$KEY_DISK\`. Neither a source nor a destination."
+  if [ "$GOAL" = windows ]; then
+    echo
+    t "## Objectif : diagnostic Windows (lecture seule)" "## Goal: Windows diagnosis (read-only)"
+    echo
+    t "La personne a choisi « Diagnostiquer un Windows ». Suis la section « Diagnostic Windows » de ta procédure. Cette version de la clé ne répare pas : tu diagnostiques et tu proposes, rien n'est écrit sur ce disque." \
+      "The person chose \"Diagnose a Windows\". Follow the \"Windows diagnosis\" section of your procedure. This version of the key does not repair: you diagnose and recommend, nothing is written to this disk."
+    if [ -n "$WIN_SUMMARY" ]; then
+      echo
+      t "Inventaire fait par le lanceur (détail : \`windows/inventory.md\`) :" \
+        "Inventory taken by the launcher (details: \`windows/inventory.md\`):"
+      echo
+      printf '%s\n' "$WIN_SUMMARY"
+    fi
+  fi
 } > "$job_dir/CLAUDE.md"
 
 # The dialogs are over: start Claude Code on a clean screen.
@@ -259,6 +361,7 @@ export RECOVERY_TECH="$tech"
 export RECOVERY_JOB="${job_dir##*/}"
 export RECOVERY_JOB_DIR="$job_dir"
 export RECOVERY_SOURCE_DISK="${SOURCE:+/dev/$SOURCE}"
+export RECOVERY_GOAL="$GOAL"
 
 echo
 df -h "$job_dir" | sed 's/^/  /'

@@ -55,6 +55,18 @@ ui_input() {
   printf -v "$__var" '%s' "$__value"
 }
 
+# ui_password VARIABLE "question"   -> status 1 if cancelled. Nothing is shown while typing.
+ui_password() {
+  local __var="$1" __value
+  if cr_ui_fancy; then
+    __value="$(whiptail --title "$CR_UI_TITLE" --passwordbox "$2" 0 70 3>&1 1>&2 2>&3)" || return 1
+  else
+    read -r -s -p "$2 " __value || return 1
+    echo
+  fi
+  printf -v "$__var" '%s' "$__value"
+}
+
 # ui_menu VARIABLE DEFAULT_TAG "text" tag "label" [tag "label"...]   -> status 1 if cancelled
 ui_menu() {
   local __var="$1" __default="$2" __text="$3" __value __count __height __i __answer

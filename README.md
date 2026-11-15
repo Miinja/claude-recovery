@@ -156,17 +156,52 @@ keys and Enter. To start it again after leaving it, type `ctrlz`.
 2. **Network**: a cable is detected automatically; otherwise a menu lists the Wi-Fi
    networks and asks for the password.
 3. **Update** of the key (`git pull`).
-4. **Disk to recover**, picked from a list showing size, model, connection and serial
+4. **Goal**: recover files, or diagnose a Windows that no longer starts (see
+   [Windows diagnosis](#windows-diagnosis)).
+5. **Disk to recover**, picked from a list showing size, model, connection and serial
    number. It is immediately **locked read-only in the kernel**: from then on no command
    can write to it, and mounting it gives a read-only mount.
-5. **Destination**, picked from the partitions of the other disks. The key and the disk
+6. **Destination**, picked from the partitions of the other disks. The key and the disk
    to recover are not offered, and a destination too small for a full clone is flagged.
-6. Claude Code starts in the job folder. The choices above are handed to it as facts, in
+7. Claude Code starts in the job folder. The choices above are handed to it as facts, in
    a `CLAUDE.md` file written in that folder.
 
 In the business edition the assistant also asks for the technician and the job reference;
 on exit, pending logs and `report.md` are sent to the server. Offline, everything stays on
 the key and is sent at the next connected session.
+
+### Windows diagnosis
+
+For a PC whose Windows no longer starts, loops on "Automatic Repair", shows blue screens
+or keeps crashing. **This first version diagnoses and recommends; it repairs nothing.**
+The Windows disk stays locked read-only for the whole session.
+
+1. **BitLocker**: an encrypted partition is reported with its protectors (TPM, password,
+   recovery key). The launcher offers to type the 48-digit recovery key to open it
+   **read-only**. The key goes from the launcher to `cryptsetup` on its standard input: it
+   is never shown to Claude, never stored, and absent from the command line and the logs
+   (a recovery key that would appear in a logged command is replaced by
+   `[recovery key removed]`).
+2. **Inventory** (`scripts/windows-detect.sh`), without Claude, in a few seconds: Windows
+   version and build, PC name, last shutdown, UEFI or BIOS boot, EFI partition and
+   `bootmgfw.efi`, BCD entries and the partition each one points to (an entry pointing to
+   no partition of the disk is flagged), WinRE, hibernation or Fast Startup, pending
+   update, Automatic Repair log, blue screen dumps, NTFS volume flagged dirty, SMART health.
+   Partitions are mounted read-only under `/mnt/windows/`. The report goes into
+   `windows/inventory.md` and its summary into the `CLAUDE.md` given to Claude.
+3. **Diagnosis with Claude**: symptoms, disk health, extract of the event logs
+   (`ctrlz events <folder>`: errors and known events — unexpected reboots, stop codes,
+   disk and NTFS errors, WHEA hardware errors, failed services and updates), read-only
+   registry (`hivexget`, `reglookup`), `SrtTrail.txt`, recent drivers.
+4. **Conclusion** in `windows/diagnostic.md`: evidence, likely cause and how sure it is,
+   repairs ordered from the least risky, each with the exact command to type in the
+   Windows recovery environment (`chkdsk`, `sfc /offwindir`, `DISM /Image`, `bcdboot`…).
+   The person decides and runs them; a backup comes first if the files have none.
+
+The diagnosis needs no destination drive: it can be kept on the key (persistence).
+
+Running the repairs from the key itself is the next step: through the PC's own WinRE
+started in a virtual machine, every command batch approved by the person, after a backup.
 
 ### Windows mode
 
@@ -207,6 +242,9 @@ scripts/
   update.sh              git pull + config install (the `ctrlz-update` command)
   lib.sh                 Shared functions (edition, language, settings block, disks)
   ui.sh                  The assistant's menus (whiptail, plain prompts as a fallback)
+  windows-detect.sh      Windows diagnosis: read-only inventory of a disk's Windows installations
+  windows-inspect.py     Reads registry hives, BCD stores and event logs (read-only)
+  bitlocker-open.sh      Opens a BitLocker partition read-only, key read on standard input
   make-key.sh            Creating a key from Linux
   update-keys.sh         Updates keys plugged into a workstation, without booting them
 build/
@@ -265,6 +303,8 @@ partition, stores the settings there, then erases the block.
 - [x] Windows mode — launcher tested on a PC for both editions with a stand-in for Claude (isolated config, log, report, cleanup)
 - [ ] Windows mode — a real Claude session on a customer PC has **never been tried**
 - [ ] Log server and Forgejo — files ready in `server/`, to be deployed
+- [x] Windows diagnosis — launcher tested in a `debian:trixie` container on a fake GPT disk (EFI, MSR, Windows, WinRE, BitLocker): registry hives and BCD built for the test, event logs exported from a real Windows 11 (about 40,000 events read in 2 min 20 s), BitLocker opened read-only with cryptsetup's reference images (recovery key typed with spaces, wrong key refused, password), key found nowhere on disk afterwards, all devices still locked read-only
+- [ ] Windows diagnosis — on a real Windows disk, and with a real Claude session, **never tried**; the image has not been rebuilt with the new packages yet
 
 ### Recovery scenarios tested
 

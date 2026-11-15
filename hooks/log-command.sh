@@ -58,7 +58,9 @@ entry="$(jq -c \
   --arg host "$(hostname)" \
   '{ts: $ts, tech: $tech, job: $job, key: $key, host: $host,
     session: .session_id, cwd: .cwd, tool: .tool_name,
-    command: .tool_input.command,
+    command: (.tool_input.command
+      # A BitLocker recovery key (8 groups of 6 digits) never reaches a log.
+      | if type == "string" then gsub("[0-9]{6}([- ]?[0-9]{6}){7}"; "[recovery key removed]") else . end),
     interrupted: (.tool_response.interrupted // false)}' \
   <<<"$payload" 2>/dev/null)"
 
