@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Met la clé à jour : git pull du dépôt, puis installation de la procédure (dans la
-# langue de la clé), des permissions et des hooks de l'édition. Lancé au début de chaque
-# session par `claude-recovery` (et au démarrage par claude-recovery-update.service).
-# Hors ligne, la version locale est gardée.
+# Updates the key: git pull of the repository, then installs the procedure (in the
+# key's language), the permissions and the hooks of the edition. Run at the start of
+# every session by `claude-recovery` (and at boot by claude-recovery-update.service).
+# Offline, the local version is kept.
 #
-#   update.sh                  mise à jour + installation
-#   update.sh --install-only   installation seule (après un changement de langue)
+#   update.sh                  update + install
+#   update.sh --install-only   install only (after a language change)
 #
-# Source des mises à jour : RECOVERY_GIT_URL s'il est défini dans
-# /etc/claude-recovery/config.env, sinon le dépôt GitHub du projet.
+# Update source: RECOVERY_GIT_URL when it is set in /etc/claude-recovery/config.env,
+# otherwise the project's GitHub repository.
 set -u
 
 # shellcheck source=scripts/lib.sh
@@ -35,14 +35,14 @@ if [ "${1:-}" != "--install-only" ]; then
   fi
 fi
 
-# Installation de la procédure de l'édition, dans la langue de la clé
+# Install the edition's procedure, in the key's language
 mkdir -p "$CLAUDE_DIR" /opt/claude-recovery/hooks
 install -m 644 "config/$EDITION/CLAUDE.$CR_LANG.md" "$CLAUDE_DIR/CLAUDE.md"
 install -m 644 "config/$EDITION/settings.json" "$CLAUDE_DIR/settings.json"
 install -m 755 hooks/*.sh /opt/claude-recovery/hooks/
 
-# Les interdictions sont aussi posées en paramètres gérés : elles priment sur tout
-# réglage local et ne peuvent pas être levées pendant une session.
+# The deny rules are also installed as managed settings: they take precedence over
+# any local setting and cannot be lifted during a session.
 if command -v sudo >/dev/null && command -v jq >/dev/null; then
   tmp="$(mktemp)"
   if jq '{permissions: {deny: .permissions.deny}}' "config/$EDITION/settings.json" > "$tmp"; then

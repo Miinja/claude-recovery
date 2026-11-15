@@ -1,17 +1,17 @@
 #!/bin/sh
-# Hook live-build, exécuté dans le chroot de l'image.
-# Installe Claude Code pour tous les utilisateurs et prépare /opt/claude-recovery.
+# live-build hook, run inside the image's chroot.
+# Installs Claude Code for all users and prepares /opt/claude-recovery.
 set -e
 
 REPO=/opt/claude-recovery/repo
 EDITION="$(cat /usr/share/claude-recovery/edition)"
 
-# Autorités de certification internes copiées par build-iso.sh (build/ca/*.crt)
+# Internal certificate authorities copied by build-iso.sh (build/ca/*.crt)
 update-ca-certificates
 
-# --- Claude Code (installeur natif) ------------------------------------------
-# L'installeur pose le binaire dans $HOME/.local : on lui donne /opt/claude comme
-# HOME pour que l'installation soit commune, puis on l'expose dans /usr/local/bin.
+# --- Claude Code (native installer) ------------------------------------------
+# The installer puts the binary in $HOME/.local: it is given /opt/claude as HOME so
+# the install is shared, then the binary is exposed in /usr/local/bin.
 export HOME=/opt/claude
 mkdir -p "$HOME"
 curl -fsSL https://claude.ai/install.sh | bash
@@ -19,28 +19,39 @@ chmod -R a+rX /opt/claude
 ln -sf /opt/claude/.local/bin/claude /usr/local/bin/claude
 /usr/local/bin/claude --version
 
-# --- Arborescence de la clé ---------------------------------------------------
+# --- Layout of the key --------------------------------------------------------
 mkdir -p /opt/claude-recovery/hooks /var/log/claude-recovery /etc/claude-recovery /etc/claude-code /mnt/jobs
 chmod 755 "$REPO"/scripts/*.sh "$REPO"/hooks/*.sh
 install -m 755 "$REPO"/hooks/*.sh /opt/claude-recovery/hooks/
 ln -sf "$REPO/scripts/session.sh" /usr/local/bin/claude-recovery
 ln -sf "$REPO/scripts/update.sh"  /usr/local/bin/claude-recovery-update
 
-# Interdictions en paramètres gérés dès le premier démarrage (avant tout git pull)
+# Deny rules as managed settings from the very first boot (before any git pull)
 jq '{permissions: {deny: .permissions.deny}}' \
   "$REPO/config/$EDITION/settings.json" > /etc/claude-code/managed-settings.json
 
-# L'utilisateur live (uid 1000, créé au démarrage par live-config) possède /opt/claude-recovery
+# The live user (uid 1000, created at boot by live-config) owns /opt/claude-recovery
 chown -R 1000:1000 /opt/claude-recovery /var/log/claude-recovery /mnt/jobs
 
-# --- Mise à jour au démarrage ------------------------------------------------
+# --- Update at boot ----------------------------------------------------------
 install -m 644 "$REPO/scripts/claude-recovery-update.service" /etc/systemd/system/
 systemctl enable claude-recovery-update.service
 
-# Message d'accueil
+# Welcome message
 cat > /etc/motd <<EOF
 
-  Claude Recovery — édition $EDITION ($(cat /usr/share/claude-recovery/version))
-  Type  claude-recovery  to start.   /   Tapez  claude-recovery  pour commencer.
+  Claude Recovery — $EDITION ($(cat /usr/share/claude-recovery/version))
+  Type  claude-recovery  to start again.   /   Tapez  claude-recovery  pour relancer.
 
 EOF
+
+# The assistant starts by itself on the first console, once per boot: nobody has to
+# type a command to get going. Leaving it drops to the shell.
+cat > /etc/profile.d/claude-recovery.sh <<'EOF'
+if [ -z "${CR_AUTOSTARTED:-}" ] && [ "$(id -u)" = "1000" ] && [ "$(tty 2>/dev/null)" = "/dev/tty1" ]    && [ ! -e /run/user/1000/claude-recovery.started ]; then
+  export CR_AUTOSTARTED=1
+  : > /run/user/1000/claude-recovery.started 2>/dev/null || true
+  claude-recovery
+fi
+EOF
+chmod 644 /etc/profile.d/claude-recovery.sh

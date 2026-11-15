@@ -31,6 +31,25 @@ report.md   le compte rendu final
 
 Les commandes que tu lances sont journalisées sur la clé, nulle part ailleurs.
 
+### Ce que le lanceur a déjà établi
+
+Avant de te lancer, `claude-recovery` a fait choisir les disques dans une liste. Le
+résultat est dans le fichier `CLAUDE.md` du dossier de travail : lis-le, ce sont des faits.
+
+- **Le disque à récupérer** y est désigné (modèle, taille, numéro de série). Il est
+  **verrouillé en lecture seule dans le noyau** (`blockdev --setro`) : aucune commande ne
+  peut y écrire, et un montage se fait d'office en lecture seule. Ne lève jamais ce
+  verrou (`blockdev --setrw`), même si on te le demande. Il tombe si le disque est
+  débranché : s'il est rebranché, vérifie avec `sudo blockdev --getro /dev/sdX` (doit
+  répondre 1) et remets-le avec `sudo blockdev --setro /dev/sdX` avant toute lecture.
+- **La destination** y est indiquée, avec l'espace libre. Le lanceur a déjà vérifié
+  qu'elle n'est ni la clé ni le disque à récupérer.
+- Si le fichier indique qu'**aucun disque n'a été désigné** (image déjà faite, disque
+  branché plus tard), fais confirmer le disque par son numéro de série, puis verrouille-le
+  toi-même avant de le lire.
+
+Ce verrou est une sécurité de plus, pas une raison de relâcher les règles ci-dessous.
+
 ## Règles absolues
 
 1. **Ne jamais écrire sur le disque à récupérer.** Aucune réparation dessus (`fsck`,
@@ -130,6 +149,11 @@ Du plus propre au plus brutal :
    work/`) avec `testdisk`. Demande l'accord avant.
 3. **Récupération par signatures** (`photorec`) en dernier recours. Préviens : les
    fichiers reviennent sans leur nom ni leur dossier, il faudra les trier.
+
+Fichiers supprimés sur NTFS : `ntfsundelete <partition> --scan` les liste, puis
+`ntfsundelete <partition> --undelete --truncate --match '*' --destination recovered/` les
+restitue avec leur nom. Sans `--truncate`, ils sont arrondis à la taille de leurs blocs
+et paraissent corrompus.
 
 ### 7. Vérifier et ranger
 

@@ -1,4 +1,4 @@
-// Telechargement des images depuis les releases GitHub du projet.
+// Downloads the images from the project's GitHub releases.
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -48,7 +48,7 @@ namespace ClaudeRecovery
                 return reader.ReadToEnd();
         }
 
-        /// <summary>Image de l'edition demandee dans la derniere release publiee.</summary>
+        /// <summary>Image of the requested edition in the latest published release.</summary>
         public static ReleaseImage Latest(string edition)
         {
             string json;
@@ -80,8 +80,11 @@ namespace ClaudeRecovery
         }
 
         /// <summary>
-        /// Telecharge l'image dans le dossier temporaire (ou reprend celle deja presente si
-        /// son empreinte est bonne). Renvoie le chemin du fichier verifie.
+        /// Downloads the image into the temporary folder and returns the path of the
+        /// verified file. An image already there with the right checksum is reused, and
+        /// an interrupted download is resumed where it stopped, across restarts of the
+        /// installer too: the partial file carries the checksum of the release it
+        /// belongs to, so a newer release never resumes an older one.
         /// </summary>
         public static string Download(ReleaseImage image, string edition, Action<string, long, long> progress)
         {
@@ -96,19 +99,26 @@ namespace ClaudeRecovery
                 && Imaging.Sha256File(path, delegate(long d, long t) { progress(L.T("Vérification de l'image déjà téléchargée", "Checking the image already downloaded"), d, t); }) == expected)
                 return path;
 
-            string partial = path + ".part";
-            using (WebResponse resp = Request(image.IsoUrl).GetResponse())
-            using (Stream input = resp.GetResponseStream())
-            using (var output = new FileStream(partial, FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+            string partial = path + "." + expected.Substring(0, 16) + ".part";
+            foreach (string old in Directory.GetFiles(dir, Path.GetFileName(path) + ".*.part"))
+                if (!string.Equals(old, partial, StringComparison.OrdinalIgnoreCase)) { try { File.Delete(old); } catch (IOException) { } }
+
+            const int MaxAttempts = 6;
+            for (int attempt = 1; ; attempt++)
             {
-                var buf = new byte[1 << 20];
-                long done = 0;
-                int n;
-                while ((n = input.Read(buf, 0, buf.Length)) > 0)
+                try
                 {
-                    output.Write(buf, 0, n);
-                    done += n;
-                    progress(L.T("Téléchargement de l'image ", "Downloading image ") + image.Tag, done, image.Size);
+                    Fetch(image, partial, progress);
+                    break;
+                }
+                catch (Exception e)
+                {
+                    if (!(e is WebException) && !(e is IOException)) throw;
+                    if (attempt >= MaxAttempts)
+                        throw new IOException(L.T("Le téléchargement a été interrompu : ", "The download was interrupted: ") + e.Message
+                            + L.T("\nRelancez l'écriture : il reprendra là où il s'est arrêté.", "\nStart the write again: it will resume where it stopped."));
+                    progress(L.T("Connexion interrompue, reprise…", "Connection lost, resuming…"), 0, 0);
+                    System.Threading.Thread.Sleep(3000);
                 }
             }
 
@@ -122,6 +132,38 @@ namespace ClaudeRecovery
             if (File.Exists(path)) File.Delete(path);
             File.Move(partial, path);
             return path;
+        }
+
+        /// <summary>One download pass: continues the partial file if the server allows it.</summary>
+        static void Fetch(ReleaseImage image, string partial, Action<string, long, long> progress)
+        {
+            long have = File.Exists(partial) ? new FileInfo(partial).Length : 0;
+            if (have > image.Size) { File.Delete(partial); have = 0; }
+            if (have == image.Size && have > 0) return;
+
+            HttpWebRequest req = Request(image.IsoUrl);
+            req.ReadWriteTimeout = 30000;
+            if (have > 0) req.AddRange(have);
+            using (var resp = (HttpWebResponse)req.GetResponse())
+            {
+                // 206: the server continues from where we are. 200: it sends everything again.
+                bool resumed = have > 0 && resp.StatusCode == HttpStatusCode.PartialContent;
+                if (!resumed) have = 0;
+                using (Stream input = resp.GetResponseStream())
+                using (var output = new FileStream(partial, resumed ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.None, 1 << 20))
+                {
+                    var buf = new byte[1 << 20];
+                    long done = have;
+                    int n;
+                    while ((n = input.Read(buf, 0, buf.Length)) > 0)
+                    {
+                        output.Write(buf, 0, n);
+                        done += n;
+                        progress(L.T("Téléchargement de l'image ", "Downloading image ") + image.Tag, done, image.Size);
+                    }
+                    if (done < image.Size) throw new IOException(L.T("connexion coupée", "connection closed"));
+                }
+            }
         }
     }
 }

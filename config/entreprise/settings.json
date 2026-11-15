@@ -4,6 +4,8 @@
   },
   "permissions": {
     "deny": [
+      "Bash(blockdev --setrw*)",
+      "Bash(sudo blockdev --setrw*)",
       "Bash(mkfs*)",
       "Bash(sudo mkfs*)",
       "Bash(wipefs*)",

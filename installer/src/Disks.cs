@@ -1,5 +1,5 @@
-// Acces bas niveau aux disques : liste des cles USB, verrouillage des volumes,
-// ecriture brute. Aucune dependance hors du .NET Framework livre avec Windows.
+// Low-level disk access: listing USB keys, locking volumes, raw writing.
+// No dependency beyond the .NET Framework that ships with Windows.
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -76,7 +76,7 @@ namespace ClaudeRecovery
             return Encoding.ASCII.GetString(buf, offset, end - offset).Trim();
         }
 
-        /// <summary>Numeros des disques qui portent le volume donne (ex. \\.\C:).</summary>
+        /// <summary>Numbers of the disks holding the given volume (e.g. \\.\C:).</summary>
         static List<int> DisksOfVolume(string volumePath)
         {
             var result = new List<int>();
@@ -94,7 +94,7 @@ namespace ClaudeRecovery
             return result;
         }
 
-        /// <summary>Disques USB, hors disque(s) du systeme. Lecture seule.</summary>
+        /// <summary>USB disks, system disk(s) excluded. Read-only.</summary>
         public static List<UsbDisk> ListUsb()
         {
             string sys = Environment.GetFolderPath(Environment.SpecialFolder.System);
@@ -114,7 +114,7 @@ namespace ClaudeRecovery
                     if (BitConverter.ToInt32(buf, 28) != BusTypeUsb) continue;
                     var len = new byte[8];
                     if (!DeviceIoControl(h, IOCTL_DISK_GET_LENGTH_INFO, null, 0, len, 8, out ret, IntPtr.Zero))
-                        continue;                      // lecteur de cartes vide, par exemple
+                        continue;                      // an empty card reader, for instance
                     long size = BitConverter.ToInt64(len, 0);
                     if (size <= 0) continue;
                     string model = (AsciiAt(buf, BitConverter.ToInt32(buf, 12)) + " "
@@ -126,12 +126,12 @@ namespace ClaudeRecovery
         }
 
         /// <summary>
-        /// Ouvre le disque en ecriture brute : verrouille et demonte ses volumes, efface sa
-        /// table de partitions. Les verrous sont tenus jusqu'a Dispose().
+        /// Opens the disk for raw writing: locks and dismounts its volumes, erases its
+        /// partition table. The locks are held until Dispose().
         /// </summary>
         public static RawDisk OpenForWrite(UsbDisk disk)
         {
-            // Garde-fou : on revérifie juste avant d'ecrire que c'est toujours la meme cle.
+            // Guard: check again right before writing that it is still the same key.
             UsbDisk now = ListUsb().Find(delegate(UsbDisk d) { return d.Number == disk.Number; });
             if (now == null || now.Size != disk.Size || now.Model != disk.Model)
                 throw new IOException(L.T("La clé a changé depuis sa sélection. Actualisez la liste et recommencez.",
@@ -188,7 +188,7 @@ namespace ClaudeRecovery
         }
     }
 
-    /// <summary>Disque ouvert en ecriture brute, volumes verrouilles.</summary>
+    /// <summary>Disk opened for raw writing, volumes locked.</summary>
     public sealed class RawDisk : IDisposable
     {
         readonly SafeFileHandle handle;

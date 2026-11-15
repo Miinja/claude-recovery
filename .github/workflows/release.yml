@@ -1,10 +1,10 @@
-# Pousser un tag vX.Y.Z construit les deux éditions de la clé et l'installeur Windows,
-# puis les publie dans une release GitHub.
+# Pushing a vX.Y.Z tag builds both editions of the key and the Windows installer,
+# then publishes them in a GitHub release.
 #
 #   git tag v0.1.0 && git push origin v0.1.0
 #
-# Les noms des fichiers publiés sont fixes : l'installeur et make-key.sh téléchargent
-# toujours .../releases/latest/download/claude-recovery-<édition>.iso
+# The published file names are fixed: the installer and make-key.sh always download
+# .../releases/latest/download/claude-recovery-<edition>.iso
 name: Release
 
 on:
@@ -26,17 +26,17 @@ jobs:
         edition: [entreprise, particulier]
     container:
       image: debian:trixie
-      # live-build monte /proc, /sys et /dev dans le chroot qu'il construit
+      # live-build mounts /proc, /sys and /dev in the chroot it builds
       options: --privileged
     steps:
-      - name: Outils de build
+      - name: Build tools
         run: |
           apt-get update
           apt-get install -y --no-install-recommends live-build git ca-certificates curl cpio xz-utils
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: Construire l'image
+      - name: Build the image
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           build/build-iso.sh ${{ matrix.edition }}
@@ -50,11 +50,11 @@ jobs:
           retention-days: 3
 
   installer:
-    name: Installeur Windows
+    name: Windows installer
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Compiler
+      - name: Build
         shell: powershell
         run: .\installer\build.ps1 -Version "${{ github.ref_name }}"
       - uses: actions/upload-artifact@v7
@@ -64,7 +64,7 @@ jobs:
           retention-days: 3
 
   release:
-    name: Publier la release
+    name: Publish the release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [iso, installer]
     runs-on: ubuntu-latest
@@ -75,13 +75,13 @@ jobs:
         with:
           path: dist
           merge-multiple: true
-      - name: Créer la release
+      - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
           ls -lh dist
-          # Relancer le workflow sur un tag déjà publié remplace les fichiers de la release.
+          # Running the workflow again on a published tag replaces the release's files.
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
           else

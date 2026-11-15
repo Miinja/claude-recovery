@@ -1,9 +1,8 @@
-# Claude Recovery - Windows mode / mode Windows
+# Claude Recovery - Windows mode
 #
 # Diagnoses a software or browser problem on Windows, then cleans up completely.
-# Diagnostic d'un bug logiciel/navigateur sous Windows, puis nettoyage complet.
 #
-# Run from the key, in PowerShell / A lancer depuis la cle, dans PowerShell :
+# Run from the key, in PowerShell:
 #   powershell -ExecutionPolicy Bypass -File .\windows\start-claude.ps1 [-Lang fr|en]
 #
 # What the script does:

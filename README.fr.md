@@ -69,6 +69,10 @@ claude-recovery lang en
 
 - Processeur Intel ou AMD 64 bits. Le démarrage fonctionne en BIOS comme en UEFI ; l'image
   prend en charge Secure Boot.
+- Pas les tout premiers PC 64 bits : Claude Code lui-même demande un processeur assez
+  récent. En test, il a planté (« instruction non permise ») sur le modèle de processeur
+  64 bits de base et fonctionné sur un modèle récent ; la limite exacte n'a pas été
+  mesurée. La clé démarre quand même sur un tel PC, mais Claude ne se lance pas.
 - 4 Go de mémoire : c'est la configuration avec laquelle la clé a été testée (en machine
   virtuelle) ; 8 Go sont plus confortables.
 - Une connexion Internet, filaire si possible : Claude Code en a besoin pendant toute la
@@ -143,22 +147,33 @@ sudo scripts/make-key.sh entreprise  /dev/sdX fr
 
 ### Premier démarrage
 
-Démarrer un PC sur la clé et taper `claude-recovery`. La première fois, la clé propose de
-créer son espace de persistance (chiffré par une phrase de passe, si on le souhaite) :
-c'est lui qui garde la connexion au compte Claude, les réglages et les journaux d'un
-démarrage à l'autre. Un redémarrage plus tard, la clé est opérationnelle.
+Démarrer un PC sur la clé : l'assistant se lance tout seul. La première fois, il propose
+de créer l'espace de persistance de la clé (chiffré par une phrase de passe, si on le
+souhaite) : c'est lui qui garde la connexion au compte Claude, les réglages et les
+journaux d'un démarrage à l'autre. Un redémarrage plus tard, la clé est opérationnelle.
 
 ## Utilisation
 
-```
-claude-recovery
-```
+L'assistant démarre de lui-même avec la clé ; tout se choisit avec les flèches et Entrée.
+Pour le relancer après l'avoir quitté, taper `claude-recovery`.
 
-La commande met la clé à jour (`git pull`), prépare le dossier de travail sur le disque de
-destination, puis lance Claude Code dedans. En édition entreprise, elle demande le
-technicien et la référence du job ; à la fermeture, les journaux en attente et
-`report.md` partent au serveur. Hors ligne, tout reste sur la clé et part à la prochaine
-session connectée.
+1. **Langue et clavier**, demandés une seule fois (la langue de l'installeur est reprise
+   s'il y en a une).
+2. **Réseau** : un câble est détecté tout seul ; sinon un menu liste les réseaux Wi-Fi et
+   demande le mot de passe.
+3. **Mise à jour** de la clé (`git pull`).
+4. **Disque à récupérer**, choisi dans une liste qui affiche taille, modèle, connexion et
+   numéro de série. Il est aussitôt **verrouillé en lecture seule dans le noyau** : plus
+   aucune commande ne peut y écrire, et un montage se fait en lecture seule.
+5. **Destination**, choisie parmi les partitions des autres disques. La clé et le disque à
+   récupérer ne sont pas proposés, et une destination trop petite pour un clone complet
+   est signalée.
+6. Claude Code démarre dans le dossier du job. Les choix ci-dessus lui sont transmis comme
+   des faits, dans un fichier `CLAUDE.md` écrit dans ce dossier.
+
+En édition entreprise, l'assistant demande aussi le technicien et la référence du job ; à
+la fermeture, les journaux en attente et `report.md` partent au serveur. Hors ligne, tout
+reste sur la clé et part à la prochaine session connectée.
 
 ### Mode Windows
 
@@ -197,7 +212,8 @@ scripts/
   session.sh             Lanceur de session (commande `claude-recovery`)
   firstboot.sh           Premier démarrage : réglages de l'installeur, persistance
   update.sh              git pull + installation de la config (commande `claude-recovery-update`)
-  lib.sh                 Fonctions communes (édition, langue, bloc de réglages)
+  lib.sh                 Fonctions communes (édition, langue, bloc de réglages, disques)
+  ui.sh                  Menus de l'assistant (whiptail, questions simples en secours)
   make-key.sh            Création d'une clé depuis Linux
   update-keys.sh         Met à jour les clés branchées sur un poste, sans les démarrer
 build/
@@ -228,13 +244,18 @@ persistance, y range les réglages, puis efface le bloc.
 
 1. Le disque source n'est **jamais** écrit : clonage ddrescue d'abord, travail sur l'image.
 2. Claude travaille sur les **métadonnées** et n'ouvre pas le contenu des fichiers sans raison.
-3. Commandes destructrices bloquées dans `settings.json`, et reprises en paramètres gérés
-   (`/etc/claude-code/managed-settings.json`) pour qu'aucun réglage local ne les lève.
-   Ces règles sont un garde-fou, pas une barrière étanche.
-4. Aucune donnée client ni aucun jeton dans ce dépôt (voir `.gitignore`).
-5. Une clé se met à jour depuis ce dépôt à chaque session : qui peut pousser sur `main`
+3. Le disque à récupérer est verrouillé en lecture seule dans le noyau
+   (`blockdev --setro`) dès qu'il est désigné : cela tient quelle que soit la commande
+   lancée. Le verrou tombe si le disque est débranché ; la procédure demande à Claude de
+   le vérifier et de le remettre.
+4. Les commandes destructrices sont aussi bloquées dans `settings.json`, et reprises en
+   paramètres gérés (`/etc/claude-code/managed-settings.json`) pour qu'aucun réglage local
+   ne les lève. Ces règles par motifs sont un garde-fou, pas une barrière étanche : la
+   vraie barrière est le verrou du noyau ci-dessus.
+5. Aucune donnée client ni aucun jeton dans ce dépôt (voir `.gitignore`).
+6. Une clé se met à jour depuis ce dépôt à chaque session : qui peut pousser sur `main`
    peut modifier la procédure de toutes les clés. Protéger la branche.
-6. Une clé entreprise perdue se révoque en trois endroits : le jeton du serveur de
+7. Une clé entreprise perdue se révoque en trois endroits : le jeton du serveur de
    journaux, le jeton du dépôt de mise à jour, la session du compte Claude. D'où
    l'intérêt de chiffrer la persistance.
 
@@ -243,9 +264,10 @@ persistance, y range les réglages, puis efface le bloc.
 - [x] Procédures des deux éditions et du mode Windows, en français et en anglais
 - [x] Journalisation et envoi au serveur — testés de bout en bout en local
 - [x] Bloc de réglages installeur → clé — testé (écriture Windows, relecture Linux)
-- [x] Installeur Windows — compile ; copie, bloc et relecture testés sur fichier
+- [x] Installeur Windows — compile ; copie, bloc, relecture et reprise de téléchargement testés (sur fichier, et contre un serveur qui coupe les connexions)
 - [ ] Installeur Windows — écriture sur une vraie clé USB **jamais essayée**
 - [x] Build des images — les deux éditions se construisent dans un conteneur `debian:trixie`, et le workflow de release a tourné sur GitHub
+- [x] Assistant de démarrage — testé en machine virtuelle : menus, choix des disques, verrou en lecture seule (une écriture directe est refusée, un montage est forcé en lecture seule), avertissement d'espace insuffisant. Le menu Wi-Fi n'a **pas** été testé (pas de Wi-Fi en machine virtuelle)
 - [x] Premier démarrage — testé en machine virtuelle (QEMU) : démarrage BIOS et UEFI, persistance en clair et chiffrée, réglages de l'installeur appliqués (édition entreprise), second démarrage avec persistance active
 - [ ] Premier démarrage sur une vraie clé USB — **jamais essayé**
 - [x] Mode Windows — lanceur testé sur un PC pour les deux éditions, avec un programme témoin à la place de Claude (configuration isolée, journal, rapport, nettoyage)

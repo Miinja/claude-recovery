@@ -1,5 +1,5 @@
-// Fenetre de l'installeur : trois etapes (edition, cle USB, ecriture), puis la
-// progression et l'ecran de fin. L'habillage est dans Ui.cs.
+// The installer's window: three steps (edition, USB key, write), then the progress
+// view and the final screen. The look is in Ui.cs.
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -11,12 +11,12 @@ namespace ClaudeRecovery
 {
     public sealed class MainForm : Form
     {
-        /// <summary>Au-dela, le disque est signale comme suspect pour une cle USB.</summary>
+        /// <summary>Above this size, the disk is flagged as suspicious for a USB key.</summary>
         public const long BigDisk = 130L * 1000 * 1000 * 1000;
 
         enum View { Setup, Busy, Done }
 
-        // Mise en page, en pixels a 96 ppp
+        // Layout, in pixels at 96 dpi
         const int W = 820, H = 500;
         static readonly int[] StepX = { 150, 410, 670 };
         const int IconY = 150, IconR = 36, ColW = 220;
@@ -49,6 +49,7 @@ namespace ClaudeRecovery
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
+            try { Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch (Exception) { }
             ClientSize = new Size(Theme.S(W), Theme.S(H));
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
 
@@ -101,7 +102,7 @@ namespace ClaudeRecovery
 
         void SetView(View v) { view = v; ApplyTexts(); }
 
-        /// <summary>Pose les textes dans la langue courante et montre les controles de la vue.</summary>
+        /// <summary>Sets the texts in the current language and shows the controls of the view.</summary>
         void ApplyTexts()
         {
             Text = "Claude Recovery";
@@ -126,7 +127,7 @@ namespace ClaudeRecovery
             Invalidate();
         }
 
-        // --- Dessin ----------------------------------------------------------------
+        // --- Drawing ---------------------------------------------------------------
 
         static void Draw(Graphics g, string text, Font font, Color color, int x, int y, int w, int h, TextFormatFlags flags)
         {
@@ -144,7 +145,7 @@ namespace ClaudeRecovery
             using (Font small = Theme.F(8.5f))
                 Draw(g, BuildInfo.Version, small, Theme.Muted, 190, 22, 200, 32, TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter);
 
-            // Etat des trois etapes : 2 = faite, 1 = en cours, 0 = a venir
+            // State of the three steps: 2 = done, 1 = current, 0 = to come
             int[] state = { 2, disk != null ? 2 : 1, disk != null ? 1 : 0 };
             if (view == View.Busy) state = new[] { 2, 2, 1 };
             if (view == View.Done) state = new[] { 2, 2, 2 };
@@ -185,7 +186,7 @@ namespace ClaudeRecovery
                 using (var p = new Pen(state == 1 ? main : Theme.Line, Theme.S(2f))) g.DrawEllipse(p, circle);
                 glyph = state == 1 ? Theme.Text : Theme.Muted;
             }
-            float u = r / 36f;       // unite du pictogramme
+            float u = r / 36f;       // unit of the pictogram
             using (var pen = new Pen(glyph, 2.6f * u) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
             using (var brush = new SolidBrush(glyph))
             {
@@ -194,19 +195,19 @@ namespace ClaudeRecovery
                     g.DrawLines(pen, new[] { new PointF(cx - 12 * u, cy + 1 * u), new PointF(cx - 3 * u, cy + 10 * u), new PointF(cx + 13 * u, cy - 9 * u) });
                 }
                 else if (index == 0)
-                {   // disque
+                {   // disc
                     g.DrawEllipse(pen, cx - 15 * u, cy - 15 * u, 30 * u, 30 * u);
                     g.FillEllipse(brush, cx - 4.5f * u, cy - 4.5f * u, 9 * u, 9 * u);
                 }
                 else if (index == 1)
-                {   // cle USB
+                {   // USB key
                     using (GraphicsPath body = Theme.Round(new RectangleF(cx - 9 * u, cy - 6 * u, 18 * u, 24 * u), 4 * u)) g.DrawPath(pen, body);
                     g.DrawLines(pen, new[] { new PointF(cx - 6 * u, cy - 6 * u), new PointF(cx - 6 * u, cy - 17 * u), new PointF(cx + 6 * u, cy - 17 * u), new PointF(cx + 6 * u, cy - 6 * u) });
                     g.FillEllipse(brush, cx - 3.6f * u, cy - 13 * u, 2.6f * u, 2.6f * u);
                     g.FillEllipse(brush, cx + 1.0f * u, cy - 13 * u, 2.6f * u, 2.6f * u);
                 }
                 else
-                {   // eclair
+                {   // lightning bolt
                     g.FillPolygon(brush, new[] {
                         new PointF(cx + 4 * u, cy - 18 * u), new PointF(cx - 11 * u, cy + 3 * u), new PointF(cx - 1 * u, cy + 3 * u),
                         new PointF(cx - 4 * u, cy + 18 * u), new PointF(cx + 11 * u, cy - 3 * u), new PointF(cx + 1 * u, cy - 3 * u) });
@@ -328,8 +329,8 @@ namespace ClaudeRecovery
         }
 
         /// <summary>
-        /// Texte du futur /etc/claude-recovery/config.env : la langue pour les deux editions,
-        /// plus les reglages de l'edition entreprise.
+        /// Text of the future /etc/claude-recovery/config.env: the language for both
+        /// editions, plus the business edition's settings.
         /// </summary>
         string BuildEnv(string edition)
         {
@@ -421,14 +422,14 @@ namespace ClaudeRecovery
             base.OnFormClosing(e);
         }
 
-        // --- Captures d'ecran (--screenshot) -----------------------------------------
+        // --- Screenshots (--screenshot) ----------------------------------------------
 
         public static UsbDisk DemoDisk(long size)
         {
             return new UsbDisk { Number = 2, Model = "SanDisk Ultra USB 3.0", Size = size };
         }
 
-        /// <summary>Met la fenetre dans un etat donne, ou rend le dialogue a capturer.</summary>
+        /// <summary>Puts the window in a given state, or returns the dialog to capture.</summary>
         public Form Demo(string state)
         {
             if (state == "disk" || state == "confirm") disk = DemoDisk(62L * 1000 * 1000 * 1000);

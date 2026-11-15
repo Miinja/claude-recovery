@@ -1,9 +1,9 @@
-# Services Claude Recovery sur le serveur de l'entreprise (édition entreprise) :
-#   forgejo    dépôt de config tiré par les clés (git pull à chaque session)
-#   log-receiver  réception des journaux d'intervention et des rapports de job
+# Claude Recovery services on the company's server (business edition):
+#   forgejo       configuration repository pulled by the keys (git pull at every session)
+#   log-receiver  receives the session logs and the job reports
 #
-# Aucun port n'est publié : Caddy (déjà en place) joint les deux services par le
-# réseau Docker ${CADDY_NETWORK}. Voir README.md et Caddyfile.snippet.
+# No port is published: Caddy (already in place) reaches both services through the
+# Docker network ${CADDY_NETWORK}. See README.md and Caddyfile.snippet.
 services:
   forgejo:
     image: codeberg.org/forgejo/forgejo:${FORGEJO_VERSION:-17}

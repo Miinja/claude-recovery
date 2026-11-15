@@ -1,7 +1,7 @@
-# Hook PostToolUse (mode Windows) : journalise chaque commande lancee par Claude.
-# Claude Code envoie le detail de l'appel en JSON sur l'entree standard.
-# Le journal est ecrit sur la cle (RECOVERY_JOURNAL), jamais sur le PC du client.
-# Ce script n'echoue jamais : il ne doit pas bloquer l'intervention.
+# PostToolUse hook (Windows mode): logs every command Claude runs.
+# Claude Code sends the details of the call as JSON on standard input.
+# The log is written to the key (RECOVERY_JOURNAL), never to the customer's PC.
+# This script never fails: it must not block the session.
 
 try {
     $raw = [Console]::In.ReadToEnd()
@@ -22,10 +22,10 @@ try {
 
     if ($env:RECOVERY_JOURNAL) {
         $line = $entry | ConvertTo-Json -Compress
-        # UTF-8 sans BOM, une entree par ligne
+        # UTF-8 without BOM, one entry per line
         [System.IO.File]::AppendAllText($env:RECOVERY_JOURNAL, $line + "`n", (New-Object System.Text.UTF8Encoding($false)))
     }
 } catch {
-    # volontairement silencieux
+    # deliberately silent
 }
 exit 0

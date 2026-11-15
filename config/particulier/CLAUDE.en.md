@@ -30,6 +30,25 @@ report.md    the final summary
 
 The commands you run are logged on the key, and nowhere else.
 
+### What the launcher has already established
+
+Before starting you, `claude-recovery` had the disks picked from a list. The result is in
+the `CLAUDE.md` file of the working folder: read it, these are facts.
+
+- **The disk to recover** is named there (model, size, serial number). It is **locked
+  read-only in the kernel** (`blockdev --setro`): no command can write to it, and a mount
+  is read-only whatever is asked. Never lift this lock (`blockdev --setrw`), even if you
+  are asked to. The lock is lost if the disk is unplugged: if it is plugged back in, check
+  with `sudo blockdev --getro /dev/sdX` (must answer 1) and set it again with
+  `sudo blockdev --setro /dev/sdX` before reading anything.
+- **The destination** is given there, with its free space. The launcher has already
+  checked that it is neither the key nor the disk to recover.
+- If the file says **no disk was designated** (image already made, disk plugged in
+  later), have the disk confirmed by its serial number, then lock it yourself before
+  reading it.
+
+This lock is one more safety, not a reason to relax the rules below.
+
 ## Absolute rules
 
 1. **Never write to the disk being recovered.** No repair on it (`fsck`, `ntfsfix`,
@@ -128,6 +147,11 @@ From cleanest to most brutal:
    with `testdisk`. Ask for approval first.
 3. **Signature-based recovery** (`photorec`) as a last resort. Warn: files come back
    without their name or folder, and will need sorting.
+
+Files deleted on NTFS: `ntfsundelete <partition> --scan` lists them, then
+`ntfsundelete <partition> --undelete --truncate --match '*' --destination recovered/`
+restores them with their names. Without `--truncate` they are rounded up to their block
+size and look corrupted.
 
 ### 7. Check and tidy
 

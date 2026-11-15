@@ -1,10 +1,10 @@
-# Compile l'installeur Windows avec le compilateur C# livre avec Windows
-# (.NET Framework 4.x) : aucun SDK a installer, et l'exe tourne tel quel sur
-# Windows 10 et 11.
+# Builds the Windows installer with the C# compiler that ships with Windows
+# (.NET Framework 4.x): no SDK to install, and the exe runs as is on Windows 10
+# and 11.
 #
 #   .\installer\build.ps1                      -> installer\out\ClaudeRecoveryInstaller.exe
 #   .\installer\build.ps1 -Version v0.1.0
-#   .\installer\build.ps1 -NoElevation         -> variante de test, sans demande de droits
+#   .\installer\build.ps1 -NoElevation         -> test build, without the elevation prompt
 
 param(
     [string]$Version = 'dev',
@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
 $out  = Join-Path $here 'out'
 $csc  = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
-if (-not (Test-Path $csc)) { throw "Compilateur introuvable : $csc" }
+if (-not (Test-Path $csc)) { throw "Compiler not found: $csc" }
 
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 $safe = $Version -replace '[^A-Za-z0-9._-]', ''
@@ -31,10 +31,11 @@ $cscArgs = @(
     '/r:System.dll', '/r:System.Core.dll', '/r:System.Drawing.dll',
     '/r:System.Windows.Forms.dll', '/r:System.Web.Extensions.dll'
 )
+$cscArgs += "/win32icon:$(Join-Path $here 'app.ico')"
 if ($NoElevation) { $cscArgs += '/nowin32manifest' } else { $cscArgs += "/win32manifest:$(Join-Path $here 'app.manifest')" }
 $cscArgs += (Get-ChildItem (Join-Path $here 'src') -Filter *.cs | ForEach-Object { $_.FullName })
 $cscArgs += $info
 
 & $csc @cscArgs
-if ($LASTEXITCODE -ne 0) { throw "Compilation echouee ($LASTEXITCODE)." }
+if ($LASTEXITCODE -ne 0) { throw "Build failed ($LASTEXITCODE)." }
 Write-Host "OK : $exe"

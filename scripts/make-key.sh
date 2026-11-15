@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# Prépare une clé Claude Recovery depuis Linux. Équivalent en ligne de commande de
-# l'installeur Windows (installer/) : même image, mêmes réglages, même format.
+# Prepares a Claude Recovery key from Linux. Command-line equivalent of the Windows
+# installer (installer/): same image, same settings, same format.
 #
-#   sudo scripts/make-key.sh entreprise  /dev/sdX [fr|en]   # télécharge la dernière release
+#   sudo scripts/make-key.sh entreprise  /dev/sdX [fr|en]   # downloads the latest release
 #   sudo scripts/make-key.sh particulier /dev/sdX [fr|en]
-#   sudo scripts/make-key.sh chemin/vers/image.iso /dev/sdX [fr|en]
+#   sudo scripts/make-key.sh path/to/image.iso /dev/sdX [fr|en]
 #
-# Le troisième argument est la langue de la clé (par défaut : celle de ce poste). Le
-# script écrit l'image puis dépose les réglages (langue, et réglages de l'édition
-# entreprise) juste après elle. La partition de persistance est créée par la clé
-# elle-même à son premier démarrage (scripts/firstboot.sh).
+# The third argument is the key's language (default: this machine's). The script
+# writes the image, then drops the settings (language, and the business edition's
+# settings) right after it. The persistence partition is created by the key itself on
+# its first boot (scripts/firstboot.sh).
 #
-# ATTENTION : efface entièrement la clé désignée.
+# WARNING: completely erases the given key.
 set -euo pipefail
 
 # shellcheck source=scripts/lib.sh
 . "$(cd "$(dirname "$0")" && pwd)/lib.sh"
 RELEASES="https://github.com/Miinja/claude-recovery/releases/latest/download"
-CR_LANG="$(cr_lang)"          # langue des messages de ce script
+CR_LANG="$(cr_lang)"          # language of this script's messages
 
 SRC="${1:-}"; DEV="${2:-}"; KEY_LANG="${3:-$CR_LANG}"
 [ "$(id -u)" -eq 0 ] || { t "À lancer en root (sudo)." "Must be run as root (sudo)." >&2; exit 1; }
@@ -29,7 +29,7 @@ case "$KEY_LANG" in fr|en) ;; *) echo "Usage: $0 <entreprise|particulier|image.i
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-# --- Image et édition ---------------------------------------------------------
+# --- Image and edition --------------------------------------------------------
 case "$SRC" in
   entreprise|particulier)
     EDITION="$SRC"
@@ -55,7 +55,7 @@ case "$SRC" in
 esac
 case "$EDITION" in entreprise|particulier) ;; *) t "Édition inconnue." "Unknown edition." >&2; exit 1 ;; esac
 
-# --- Garde-fous : disque entier, branché en USB, non monté --------------------
+# --- Guards: whole disk, plugged in over USB, not mounted ----------------------
 [ "$(lsblk -dno TYPE "$DEV")" = "disk" ] || { t "$DEV n'est pas un disque entier." "$DEV is not a whole disk." >&2; exit 1; }
 [ "$(lsblk -dno TRAN "$DEV")" = "usb" ]  || { t "$DEV n'est pas un périphérique USB : refus." "$DEV is not a USB device: refusing." >&2; exit 1; }
 if lsblk -no MOUNTPOINTS "$DEV" | grep -q .; then
@@ -63,7 +63,7 @@ if lsblk -no MOUNTPOINTS "$DEV" | grep -q .; then
   exit 1
 fi
 
-# --- Réglages -----------------------------------------------------------------
+# --- Settings -----------------------------------------------------------------
 CONF="$TMP/config.env"
 {
   echo "# make-key.sh $(date +%F)"
@@ -92,7 +92,7 @@ if [ "$EDITION" = "entreprise" ]; then
   } >> "$CONF"
 fi
 
-# --- Écriture -----------------------------------------------------------------
+# --- Writing ------------------------------------------------------------------
 echo
 t "Clé cible :" "Target key:"
 lsblk -o NAME,SIZE,MODEL,SERIAL,TRAN,FSTYPE,LABEL "$DEV"

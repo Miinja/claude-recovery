@@ -1,5 +1,5 @@
-// Copie de l'image vers la cle, bloc de reglages, relecture de controle.
-// Travaille sur des Stream : la meme logique sert a la cle et aux tests sur fichier.
+// Copies the image to the key, writes the settings block, reads back to verify.
+// Works on Streams: the same logic serves the key and the tests on a file.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +11,7 @@ namespace ClaudeRecovery
     public static class Imaging
     {
         public const int Chunk = 4 * 1024 * 1024;
-        public const int BlobArea = 1024 * 1024;       // zone reservee au bloc de reglages
+        public const int BlobArea = 1024 * 1024;       // area reserved for the settings block
         public const int BlobMax = 60 * 1024;
         const string Magic = "CRCFGv01";
 
@@ -41,13 +41,13 @@ namespace ClaudeRecovery
             }
         }
 
-        /// <summary>Decalage du bloc de reglages : frontiere de 1 Mio qui suit l'image.</summary>
+        /// <summary>Offset of the settings block: the 1 MiB boundary after the image.</summary>
         public static long BlobOffset(long imageLength)
         {
             return ((imageLength + BlobArea - 1) / BlobArea) * BlobArea;
         }
 
-        /// <summary>Ligne NOM='valeur' sure a inclure par un shell.</summary>
+        /// <summary>A NAME='value' line that is safe to source from a shell.</summary>
         public static string EnvLine(string name, string value)
         {
             if (value.IndexOf('\n') >= 0 || value.IndexOf('\r') >= 0)
@@ -55,7 +55,7 @@ namespace ClaudeRecovery
             return name + "='" + value.Replace("'", "'\\''") + "'\n";
         }
 
-        /// <summary>Bloc de 1 Mio : CRCFGv01\n taille\n sha256\n contenu, complete par des zeros.</summary>
+        /// <summary>1 MiB block: CRCFGv01\n size\n sha256\n content, padded with zeros.</summary>
         public static byte[] BuildBlob(string envText)
         {
             byte[] payload = new UTF8Encoding(false).GetBytes(envText);
@@ -70,8 +70,8 @@ namespace ClaudeRecovery
         }
 
         /// <summary>
-        /// Ecrit l'image au debut de la cible, puis le bloc de reglages (ou des zeros, pour
-        /// effacer celui d'une ecriture precedente). Renvoie le SHA-256 de ce qui a ete ecrit.
+        /// Writes the image at the start of the target, then the settings block (or zeros,
+        /// to erase the one from an earlier write). Returns the SHA-256 of what was written.
         /// </summary>
         public static string Write(string imagePath, Stream target, byte[] blob, Action<long, long> progress)
         {
@@ -87,7 +87,7 @@ namespace ClaudeRecovery
                     while (n < buf.Length && (r = src.Read(buf, n, buf.Length - n)) > 0) n += r;
                     if (n == 0) break;
                     sha.TransformBlock(buf, 0, n, null, 0);
-                    // Un disque brut n'accepte que des multiples de la taille de secteur.
+                    // A raw disk only accepts multiples of the sector size.
                     int padded = (n + 4095) / 4096 * 4096;
                     if (padded > n) Array.Clear(buf, n, padded - n);
                     target.Write(buf, 0, padded);
@@ -104,7 +104,7 @@ namespace ClaudeRecovery
             }
         }
 
-        /// <summary>Relit la cible et compare a l'empreinte attendue et au bloc ecrit.</summary>
+        /// <summary>Reads the target back and compares it with the expected checksum and the block written.</summary>
         public static bool Verify(Stream target, long imageLength, string expectedSha, byte[] blob, Action<long, long> progress)
         {
             using (var sha = SHA256.Create())
@@ -114,7 +114,7 @@ namespace ClaudeRecovery
                 target.Position = 0;
                 while (done < imageLength)
                 {
-                    // Lectures par multiples de secteur ; on ne hache que la partie utile.
+                    // Reads in multiples of the sector size; only the useful part is hashed.
                     int want = (int)Math.Min(buf.Length, (imageLength - done + 4095) / 4096 * 4096);
                     int n = 0, r;
                     while (n < want && (r = target.Read(buf, n, want - n)) > 0) n += r;

@@ -1,9 +1,9 @@
-# À ajouter au Caddyfile existant, puis recharger Caddy.
-# Remplacer les noms par ceux de server/.env.
+# Add to the existing Caddyfile, then reload Caddy.
+# Replace the names with those of server/.env.
 #
-# Nom interne (non résolu sur Internet) : garder `tls internal`. Les clés doivent
-# alors faire confiance à l'autorité locale de Caddy (voir README.md).
-# Nom public : supprimer `tls internal`, Caddy obtient un certificat tout seul.
+# Internal name (not resolved on the Internet): keep `tls internal`. The keys must then
+# trust Caddy's local authority (see README.md).
+# Public name: remove `tls internal`, Caddy gets a certificate by itself.
 
 git.exemple.lan {
 	tls internal

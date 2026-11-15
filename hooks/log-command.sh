@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Hook PostToolUse : journalise chaque commande lancée par Claude.
-# Claude Code envoie le détail de l'appel en JSON sur stdin.
+# PostToolUse hook: logs every command Claude runs.
+# Claude Code sends the details of the call as JSON on stdin.
 #
-#   log-command.sh           mode hook (lit stdin)
-#   log-command.sh --flush   vide la file d'attente vers le serveur
+#   log-command.sh           hook mode (reads stdin)
+#   log-command.sh --flush   empties the queue to the server
 #
-# Chaque entrée est écrite dans commands.jsonl (archive locale) et dans une file
-# d'attente envoyée au serveur. Hors ligne, la file s'accumule et part au prochain
-# envoi réussi. Ce script n'échoue jamais : il ne doit pas bloquer un job.
+# Each entry is written to commands.jsonl (local archive) and to a queue sent to the
+# server. Offline, the queue builds up and leaves at the next successful send. This
+# script never fails: it must not block a job.
 set -u
 
 # shellcheck disable=SC1091
@@ -16,17 +16,17 @@ set -u
 LOG_DIR="${RECOVERY_LOG_DIR:-/var/log/claude-recovery}"
 SERVER_URL="${RECOVERY_LOG_URL:-}"
 TOKEN="${RECOVERY_LOG_TOKEN:-}"
-QUEUE="$LOG_DIR/queue.jsonl"        # entrées pas encore prises en charge
-SENDING="$LOG_DIR/queue.sending"    # lot en cours d'envoi
+QUEUE="$LOG_DIR/queue.jsonl"        # entries not handled yet
+SENDING="$LOG_DIR/queue.sending"    # batch being sent
 
 mkdir -p "$LOG_DIR" 2>/dev/null || exit 0
 
 flush_queue() {
   [ -n "$SERVER_URL" ] || return 0
   (
-    # Un seul expéditeur à la fois.
+    # Only one sender at a time.
     flock -n 8 || exit 0
-    # Bascule de la file vers le lot, sous le même verrou que les écritures.
+    # Move the queue to the batch, under the same lock as the writes.
     (
       flock -w 5 9 || exit 0
       if [ -s "$QUEUE" ]; then

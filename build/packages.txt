@@ -1,5 +1,5 @@
-# Paquets Debian de l'image live Claude Recovery
-# Récupération / diagnostic
+# Debian packages of the Claude Recovery live image
+# Recovery / diagnosis
 gddrescue
 testdisk
 smartmontools
@@ -21,27 +21,27 @@ cryptsetup-initramfs
 gdisk
 parted
 fdisk
-# Matériel
+# Hardware
 lshw
 pciutils
 usbutils
 dmidecode
-# Analyse / tri
+# Analysis / sorting
 file
 jq
 fdupes
 libimage-exiftool-perl
 clamav
-# VM pour disques suspects
+# VM for suspicious disks
 qemu-system-x86
 qemu-utils
-# Réseau (Wi-Fi chez le client) et firmwares
+# Network (Wi-Fi at the customer's) and firmware
 network-manager
 firmware-linux
 firmware-iwlwifi
 firmware-realtek
 firmware-atheros
-# Outils
+# Tools
 sudo
 git
 curl
@@ -55,3 +55,4 @@ openssh-client
 util-linux
 locales
 console-setup
+whiptail

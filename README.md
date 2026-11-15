@@ -65,6 +65,10 @@ claude-recovery lang fr
 
 - 64-bit Intel or AMD processor. BIOS and UEFI boot both work; Secure Boot is supported
   by the image.
+- Not the very oldest 64-bit PCs: Claude Code itself needs a reasonably recent processor.
+  In tests it crashed ("illegal instruction") on the baseline 64-bit processor model and
+  ran on a recent one; the exact limit was not measured. The key still boots on such a
+  PC, but Claude does not start.
 - 4 GB of RAM is what the key was tested with (in a virtual machine); 8 GB is more
   comfortable.
 - An Internet connection, wired if possible: Claude Code needs it for the whole session.
@@ -135,21 +139,32 @@ sudo scripts/make-key.sh entreprise  /dev/sdX en
 
 ### First boot
 
-Boot a PC from the key and type `claude-recovery`. The first time, the key offers to
-create its persistence space (encrypted with a passphrase if you wish): it is what keeps
-the Claude account sign-in, the settings and the logs from one boot to the next. One
+Boot a PC from the key: the assistant starts by itself. The first time, it offers to
+create the key's persistence space (encrypted with a passphrase if you wish): it is what
+keeps the Claude account sign-in, the settings and the logs from one boot to the next. One
 reboot later, the key is operational.
 
 ## Usage
 
-```
-claude-recovery
-```
+The assistant starts on its own when the key boots; everything is chosen with the arrow
+keys and Enter. To start it again after leaving it, type `claude-recovery`.
 
-The command updates the key (`git pull`), prepares the working folder on the destination
-drive, then starts Claude Code in it. In the business edition it asks for the technician
-and the job reference; on exit, pending logs and `report.md` are sent to the server.
-Offline, everything stays on the key and is sent at the next connected session.
+1. **Language and keyboard**, asked once (the installer's language is used if there is
+   one).
+2. **Network**: a cable is detected automatically; otherwise a menu lists the Wi-Fi
+   networks and asks for the password.
+3. **Update** of the key (`git pull`).
+4. **Disk to recover**, picked from a list showing size, model, connection and serial
+   number. It is immediately **locked read-only in the kernel**: from then on no command
+   can write to it, and mounting it gives a read-only mount.
+5. **Destination**, picked from the partitions of the other disks. The key and the disk
+   to recover are not offered, and a destination too small for a full clone is flagged.
+6. Claude Code starts in the job folder. The choices above are handed to it as facts, in
+   a `CLAUDE.md` file written in that folder.
+
+In the business edition the assistant also asks for the technician and the job reference;
+on exit, pending logs and `report.md` are sent to the server. Offline, everything stays on
+the key and is sent at the next connected session.
 
 ### Windows mode
 
@@ -188,7 +203,8 @@ scripts/
   session.sh             Session launcher (the `claude-recovery` command)
   firstboot.sh           First boot: installer settings, persistence
   update.sh              git pull + config install (the `claude-recovery-update` command)
-  lib.sh                 Shared functions (edition, language, settings block)
+  lib.sh                 Shared functions (edition, language, settings block, disks)
+  ui.sh                  The assistant's menus (whiptail, plain prompts as a fallback)
   make-key.sh            Creating a key from Linux
   update-keys.sh         Updates keys plugged into a workstation, without booting them
 build/
@@ -219,13 +235,17 @@ partition, stores the settings there, then erases the block.
 
 1. The source disk is **never** written to: ddrescue clone first, work on the image.
 2. Claude works on **metadata** and does not open file contents without a reason.
-3. Destructive commands are blocked in `settings.json` and repeated as managed settings
-   (`/etc/claude-code/managed-settings.json`) so that no local setting can lift them.
-   These rules are a guard rail, not a hard security boundary.
-4. No customer data and no token in this repository (see `.gitignore`).
-5. A key updates itself from this repository at every session: whoever can push to `main`
+3. The disk to recover is locked read-only in the kernel (`blockdev --setro`) as soon as
+   it is designated: this holds whatever command is run. The lock is lost if the disk is
+   unplugged; the procedure tells Claude to check it and set it again.
+4. Destructive commands are also blocked in `settings.json` and repeated as managed
+   settings (`/etc/claude-code/managed-settings.json`) so that no local setting can lift
+   them. These pattern rules are a guard rail, not a hard security boundary: the kernel
+   lock above is the real one.
+5. No customer data and no token in this repository (see `.gitignore`).
+6. A key updates itself from this repository at every session: whoever can push to `main`
    can change the procedure of every key. Protect the branch.
-6. A lost business key is revoked in three places: the log-server token, the
+7. A lost business key is revoked in three places: the log-server token, the
    update-repository token, and the Claude account session. Hence the value of an
    encrypted persistence.
 
@@ -234,9 +254,10 @@ partition, stores the settings there, then erases the block.
 - [x] Procedures for both editions and Windows mode, in English and French
 - [x] Logging and sending to the server — tested end to end locally
 - [x] Settings block installer → key — tested (written on Windows, read back on Linux)
-- [x] Windows installer — builds; copy, settings block and read-back tested on a file
+- [x] Windows installer — builds; copy, settings block, read-back and download resume tested (on a file, and against a server that cuts connections)
 - [ ] Windows installer — writing to a real USB key has **never been tried**
 - [x] Image build — both editions build in a `debian:trixie` container, and the release workflow has run on GitHub
+- [x] Start-up assistant — tested in a virtual machine: menus, disk selection, read-only lock (a direct write is refused, a mount is forced read-only), free-space warning. The Wi-Fi menu was **not** tested (no Wi-Fi in a virtual machine)
 - [x] First boot — tested in a virtual machine (QEMU): BIOS and UEFI boot, plain and encrypted persistence, installer settings applied (business edition), second boot with persistence active
 - [ ] First boot on a real USB key — **never tried**
 - [x] Windows mode — launcher tested on a PC for both editions with a stand-in for Claude (isolated config, log, report, cleanup)

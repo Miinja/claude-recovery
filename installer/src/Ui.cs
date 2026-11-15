@@ -1,5 +1,5 @@
-// Habillage de l'installeur : palette, boutons plats, selecteur a deux positions et
-// dialogues sombres. Tout est dessine avec GDI+, sans dependance externe.
+// The installer's look: palette, flat buttons, segmented selector and dark dialogs.
+// Everything is drawn with GDI+, with no external dependency.
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -69,7 +69,7 @@ namespace ClaudeRecovery
         [DllImport("dwmapi.dll")]
         static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
-        /// <summary>Barre de titre sombre (Windows 10 2004 et suivants ; sans effet avant).</summary>
+        /// <summary>Dark title bar (Windows 10 2004 and later; no effect before).</summary>
         public static void DarkTitleBar(Form f)
         {
             try { int on = 1; DwmSetWindowAttribute(f.Handle, 20, ref on, 4); }
@@ -79,7 +79,7 @@ namespace ClaudeRecovery
 
     public enum ButtonKind { Accent, Ghost, Danger, Link }
 
-    /// <summary>Bouton plat a coins arrondis, utilisable au clavier.</summary>
+    /// <summary>Flat button with rounded corners, usable from the keyboard.</summary>
     public sealed class FlatButton : Control
     {
         public ButtonKind Kind = ButtonKind.Ghost;
@@ -156,7 +156,7 @@ namespace ClaudeRecovery
         }
     }
 
-    /// <summary>Selecteur a plusieurs positions (edition, langue).</summary>
+    /// <summary>Selector with several positions (edition, language).</summary>
     public sealed class Segmented : Control
     {
         public string[] Items = new string[0];
@@ -230,7 +230,7 @@ namespace ClaudeRecovery
         }
     }
 
-    /// <summary>Base des dialogues sombres : titre, contenu, rangee de boutons.</summary>
+    /// <summary>Base of the dark dialogs: title, content, row of buttons.</summary>
     public class DarkDialog : Form
     {
         protected readonly Label Heading = new Label();
@@ -258,7 +258,7 @@ namespace ClaudeRecovery
 
         protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Theme.DarkTitleBar(this); }
 
-        /// <summary>Pose les boutons en bas a droite, le premier etant le plus a droite.</summary>
+        /// <summary>Places the buttons at the bottom right, the first one being the rightmost.</summary>
         protected void PlaceButtons(params FlatButton[] buttons)
         {
             int x = ClientSize.Width - Pad;
@@ -279,7 +279,7 @@ namespace ClaudeRecovery
         }
     }
 
-    /// <summary>Message ou question, a la place des boites systeme.</summary>
+    /// <summary>Message or question, instead of the system message boxes.</summary>
     public sealed class MessageDialog : DarkDialog
     {
         public MessageDialog(string title, string text, string yes, string no, ButtonKind yesKind)
@@ -299,7 +299,7 @@ namespace ClaudeRecovery
                 FlatButton cancel = Button(no, ButtonKind.Ghost);
                 cancel.Click += delegate { DialogResult = DialogResult.No; };
                 PlaceButtons(ok, cancel);
-                cancel.TabIndex = 0; ok.TabIndex = 1;      // le refus a le focus par defaut
+                cancel.TabIndex = 0; ok.TabIndex = 1;      // declining has the focus by default
             }
             else PlaceButtons(ok);
         }
@@ -322,14 +322,14 @@ namespace ClaudeRecovery
         }
     }
 
-    /// <summary>Choix de la cle USB.</summary>
+    /// <summary>USB key selection.</summary>
     public sealed class DiskDialog : DarkDialog
     {
         readonly ListBox list = new ListBox();
         readonly Label empty = new Label();
         readonly FlatButton ok;
         public UsbDisk Selected;
-        /// <summary>Disques affiches a la place de la detection reelle (captures d'ecran).</summary>
+        /// <summary>Disks shown instead of the real detection (screenshots).</summary>
         public List<UsbDisk> Demo;
 
         public DiskDialog()
@@ -413,14 +413,14 @@ namespace ClaudeRecovery
         }
     }
 
-    /// <summary>Reglages de l'edition entreprise, ecrits sur la cle.</summary>
+    /// <summary>Business edition settings, written to the key.</summary>
     public sealed class KeySettings
     {
         public string Company = "", KeyId = "", LogUrl = "", Token = "", GitUrl = "";
 
         public bool Complete { get { return Validate() == null; } }
 
-        /// <summary>Message d'erreur, ou null si les reglages sont valides.</summary>
+        /// <summary>Error message, or null when the settings are valid.</summary>
         public string Validate()
         {
             if (!Regex.IsMatch(KeyId, "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"))
@@ -531,7 +531,7 @@ namespace ClaudeRecovery
             DialogResult = DialogResult.OK;
         }
 
-        /// <summary>Interroge le recepteur : joignable ? jeton accepte ? N'y ecrit rien.</summary>
+        /// <summary>Queries the receiver: reachable? token accepted? Writes nothing to it.</summary>
         async System.Threading.Tasks.Task TestServer()
         {
             Collect();
@@ -549,7 +549,7 @@ namespace ClaudeRecovery
             Say(result.Substring(1), result[0] == '+' ? Theme.Ok : Theme.Danger);
         }
 
-        /// <summary>Resultat prefixe par + (tout va bien) ou - (probleme).</summary>
+        /// <summary>Result prefixed with + (all good) or - (problem).</summary>
         public static string Probe(string url, string token)
         {
             try

@@ -1,4 +1,4 @@
-// Point d'entree de l'installeur Claude Recovery.
+// Entry point of the Claude Recovery installer.
 using System;
 using System.IO;
 using System.Security.Principal;
@@ -12,9 +12,22 @@ namespace ClaudeRecovery
         static int Main(string[] args)
         {
             if (args.Length >= 1 && args[0] == "--selftest") return SelfTest(args);
+            if (args.Length >= 5 && args[0] == "--fetch")
+            {
+                // --fetch <image url> <checksum url> <size> <log>: the download alone, with
+                // its resume logic, against any server. Used by the tests.
+                try
+                {
+                    var image = new ReleaseImage { Tag = "test", IsoUrl = args[1], ShaUrl = args[2], Size = long.Parse(args[3]) };
+                    string file = Releases.Download(image, "fetchtest", delegate(string s, long d, long t) { });
+                    File.WriteAllText(args[4], "ok " + new FileInfo(file).Length);
+                }
+                catch (Exception e) { File.WriteAllText(args[4], "error " + e.Message); }
+                return 0;
+            }
             if (args.Length >= 4 && args[0] == "--probe")
             {
-                // --probe <adresse> <jeton> <fichier> : le test du serveur de journaux, sans fenetre
+                // --probe <address> <token> <file>: the log server test, without a window
                 File.WriteAllText(args[3], SettingsDialog.Probe(args[1], args[2]));
                 return 0;
             }
@@ -24,8 +37,8 @@ namespace ClaudeRecovery
             Theme.Init();
             if (args.Length >= 2 && args[0] == "--screenshot")
             {
-                // --screenshot <png> [fr|en] [etat] : rendu de la fenetre (ou d'un dialogue)
-                // dans un PNG, pour controler la mise en page. Etats : voir MainForm.Demo.
+                // --screenshot <png> [fr|en] [state]: renders the window (or a dialog) to a
+                // PNG, to check the layout. States: see MainForm.Demo.
                 if (args.Length >= 3) L.Lang = args[2] == "fr" ? "fr" : "en";
                 using (var form = new MainForm())
                 {
@@ -53,8 +66,8 @@ namespace ClaudeRecovery
             return 0;
         }
 
-        // --selftest <image> <fichier cible> : exerce la copie, le bloc de reglages et la
-        // relecture sur un simple fichier, et liste les cles USB. N'ecrit sur aucun disque.
+        // --selftest <image> <target file>: exercises the copy, the settings block and the
+        // read-back on a plain file, and lists the USB keys. Writes to no disk.
         static int SelfTest(string[] args)
         {
             try
@@ -75,7 +88,7 @@ namespace ClaudeRecovery
                         log.WriteLine("sha256: " + sha);
                         log.WriteLine("blob_offset: " + Imaging.BlobOffset(length));
                         log.WriteLine("verify: " + Imaging.Verify(target, length, sha, blob, null));
-                        target.Position = 5; target.WriteByte(0xFF);          // alteration volontaire
+                        target.Position = 5; target.WriteByte(0xFF);          // deliberate corruption
                         log.WriteLine("verify_after_corruption: " + Imaging.Verify(target, length, sha, blob, null));
                     }
                 }
