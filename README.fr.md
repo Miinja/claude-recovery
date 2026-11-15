@@ -40,6 +40,62 @@ claude-recovery lang fr
 claude-recovery lang en
 ```
 
+## Prérequis et recommandations
+
+### La clé USB
+
+| | Minimum | Recommandé |
+|---|---|---|
+| Capacité | 4 Go | 32 Go |
+| Interface | USB 2.0 | USB 3.0 ou plus récent |
+
+- L'image occupe 1,4 Go et l'installeur refuse une clé qui n'a pas 2 Go libres après
+  elle, d'où le minimum de 4 Go.
+- L'espace qui reste après l'image est partagé en deux au premier démarrage : la
+  persistance (connexion Claude, réglages, journaux ; la moitié de l'espace libre, 16 Go
+  au plus) et la partition `CR-WINDOWS` du mode Windows. Une clé de 32 Go donne environ
+  14 Go de persistance ; à partir de 64 Go elle reste à 16 Go et seule `CR-WINDOWS`
+  grandit.
+- Tout le système est lu depuis la clé : en USB 2.0 elle démarre et fonctionne, mais
+  lentement. Préférez une clé USB 3 de marque connue, branchée sur un port USB 3.
+- Réservez une clé à cet usage : elle est entièrement effacée et ne doit rien contenir
+  d'autre. L'installeur signale les disques de plus de 130 Go, qui sont en général des
+  disques externes.
+- Chiffrez la persistance (proposé au premier démarrage) si la clé sort de chez vous ou de
+  l'atelier : elle contient la session du compte Claude et, en édition entreprise, le
+  jeton du serveur.
+
+### Le PC que l'on démarre
+
+- Processeur Intel ou AMD 64 bits. Le démarrage fonctionne en BIOS comme en UEFI ; l'image
+  prend en charge Secure Boot.
+- 4 Go de mémoire : c'est la configuration avec laquelle la clé a été testée (en machine
+  virtuelle) ; 8 Go sont plus confortables.
+- Une connexion Internet, filaire si possible : Claude Code en a besoin pendant toute la
+  session.
+- Un compte Claude.
+
+### Le disque de destination
+
+Les fichiers récupérés ne vont jamais sur la clé ni sur le disque à récupérer : il faut un
+troisième disque.
+
+- Capacité : au moins la taille du disque à récupérer, puisque la première étape en fait
+  un clone complet. Le double est confortable, car les fichiers récupérés sont recopiés à
+  côté du clone.
+- Un disque en bon état, formaté en exFAT ou en NTFS pour que le résultat soit lisible
+  sous Windows.
+- Branchez-le sur un autre port USB que la clé, avec un hub alimenté si le PC a peu de
+  ports.
+
+### Avant de commencer
+
+- Cessez tout de suite d'utiliser le disque en panne : chaque écriture peut détruire ce
+  qui est encore récupérable.
+- Un disque qui claque, qui n'est plus détecté du tout ou qui est tombé relève d'un
+  laboratoire, pas d'un logiciel. Claude le dit quand les symptômes vont dans ce sens.
+- Créez et essayez la clé avant d'en avoir besoin, sur un PC qui fonctionne.
+
 ## Créer une clé
 
 ### Sous Windows : l'installeur

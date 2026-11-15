@@ -39,6 +39,56 @@ claude-recovery lang en
 claude-recovery lang fr
 ```
 
+## Requirements and recommendations
+
+### The USB key
+
+| | Minimum | Recommended |
+|---|---|---|
+| Capacity | 4 GB | 32 GB |
+| Interface | USB 2.0 | USB 3.0 or later |
+
+- The image takes 1.4 GB and the installer refuses a key that does not have 2 GB free
+  after it, hence the 4 GB minimum.
+- The space left after the image is split in two on first boot: the persistence
+  (Claude sign-in, settings, logs; half of the free space, 16 GB at most) and the
+  `CR-WINDOWS` partition used by Windows mode. A 32 GB key gives about 14 GB of
+  persistence; from 64 GB up it stays at 16 GB and only `CR-WINDOWS` grows.
+- The whole system is read from the key: on USB 2.0 it boots and runs, but slowly. Prefer
+  a USB 3 key from a known brand, and plug it into a USB 3 port.
+- Use a key dedicated to this: it is completely erased, and it should not hold anything
+  else. The installer flags disks over 130 GB, which are usually external drives.
+- Encrypt the persistence (offered on first boot) if the key leaves your home or workshop:
+  it holds the Claude account session and, in the business edition, the server token.
+
+### The PC you boot
+
+- 64-bit Intel or AMD processor. BIOS and UEFI boot both work; Secure Boot is supported
+  by the image.
+- 4 GB of RAM is what the key was tested with (in a virtual machine); 8 GB is more
+  comfortable.
+- An Internet connection, wired if possible: Claude Code needs it for the whole session.
+- A Claude account.
+
+### The destination drive
+
+Recovered files never go to the key or to the disk being recovered: you need a third
+drive.
+
+- Capacity: at least the size of the disk to recover, since the first step is a full
+  clone of it. Twice that size is comfortable, because the recovered files are copied out
+  next to the clone.
+- A drive in good health, formatted in exFAT or NTFS so the result can be read on Windows.
+- Plug it into a different USB port from the key, on a powered hub if the PC has few
+  ports.
+
+### Before you start
+
+- Stop using the faulty disk at once: every write can destroy what is still recoverable.
+- A disk that clicks, is not detected at all, or was dropped needs a recovery lab, not
+  software. Claude says so when the symptoms point that way.
+- Create and test the key before you need it, on a PC that works.
+
 ## Creating a key
 
 ### On Windows: the installer
