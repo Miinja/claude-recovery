@@ -68,6 +68,8 @@ This lock is one more safety, not a reason to relax the rules below.
 7. **Ask before any irreversible action**, even on the copy: explain what will be changed
    or lost, and wait for a clear yes.
 8. **Nothing leaves.** Send no file and no information from the disk to the Internet.
+   Only exception: copying to storage of the person's own (NAS, share, online account)
+   that they ask you to use (see "Handing files back over the network").
 9. **Never work around a refusal.** If a command is blocked, do not look for an
    equivalent: explain why it is blocked.
 
@@ -112,6 +114,16 @@ space (`df -h "$RECOVERY_JOB_DIR"`).
 Sum up the SMART state in one sentence: healthy, worn, or at end of life. At end of life,
 see "When to stop". If the person wants to continue, clone without delay.
 
+**The PC itself.** `sensors` shows the temperatures (CPU, NVMe disks); if it finds no
+sensor, run `sudo sensors-detect --auto`, then `sensors` again. Faulty memory corrupts
+copies without any error message. Suspect it if the PC crashes or reboots on its own, or
+if the fingerprint of the same file changes from one run to the next. Then the person
+reboots the key and picks "Utilities" then "Memory Diagnostic Tool (memtest86+)" in the
+boot menu. A full pass takes one to several hours; if the PC refuses to start it, turn
+Secure Boot off for the test. From the session, `sudo memtester 1G 1` runs a quick test,
+but of part of the memory only. Do not clone on a PC whose memory is faulty: say so, the
+copy will have to be made on another PC.
+
 ### 4. Copy the disk (cloning)
 
 ```
@@ -153,6 +165,26 @@ Files deleted on NTFS: `ntfsundelete <partition> --scan` lists them, then
 restores them with their names. Without `--truncate` they are rounded up to their block
 size and look corrupted.
 
+Deleted files with their names, on NTFS, FAT, exFAT or ext: The Sleuth Kit reads the
+image without changing it.
+
+```
+mmls image/image.img                                      # partitions, start in sectors
+fls -r -d -p -o <start> image/image.img                   # deleted files, with their path
+tsk_recover -o <start> image/image.img recovered/deleted/ # extracts them (-e: all files)
+icat -o <start> image/image.img <inode> > 'recovered/<name>'  # a single file
+```
+
+On ext4, deleted files lose their list of blocks: `ext4magic` rebuilds it from the
+journal, the better the more recent the deletion. It reads a partition, not a whole
+image:
+
+```
+sudo losetup -r -f --show -o $((<start> * 512)) image/image.img   # answers /dev/loopN
+sudo ext4magic /dev/loopN -r -d recovered/ext4magic/
+sudo losetup -d /dev/loopN
+```
+
 ### 7. Check and tidy
 
 - Say how many files and how much data were recovered, by type (photos, videos,
@@ -161,6 +193,36 @@ size and look corrupted.
 - After `photorec`, sort by type and date (`exiftool` for photos).
 - Run `clamscan -r --infected recovered/` and report any infected file without deleting
   it.
+- **Fingerprints**, once sorting is done, from the job folder:
+  `hashdeep -c sha256 -r -l recovered > hashes.txt`. To check a copy handed over
+  (backup on another drive),
+  from the folder that holds its copy of `recovered`:
+  `hashdeep -c sha256 -r -l -a -k "$RECOVERY_JOB_DIR/hashes.txt" recovered`. It must
+  answer "Audit passed"; otherwise `-x` lists the files that differ. Explain
+  simply that this proves the backup is identical.
+
+### Handing files back over the network (on request)
+
+Only if the person asks for it and names the target: their NAS, a share on their network,
+or their own online storage account.
+
+- **Windows share or NAS.** The person mounts the share in another console
+  (Ctrl+Alt+F2, back with Ctrl+Alt+F1), using the command you give. The password is
+  typed at the prompt, never in the command nor in the conversation:
+
+  ```
+  smbclient -L //<server> -U <account>          # lists the shares
+  sudo mkdir -p /mnt/share
+  sudo mount -t cifs //<server>/<share> /mnt/share -o username=<account>,uid=recovery,gid=recovery
+  ```
+
+  You then copy: `rsync -a --info=progress2 recovered /mnt/share/<folder>/`.
+- **Online storage** (OneDrive, Google Drive, Dropbox…). The person runs
+  `rclone config` in the other console, since it means signing in to the account. You
+  then copy: `rclone copy recovered/ <remote>:<folder>/recovered --progress`.
+- Check the copy: `hashdeep` (above) from `/mnt/share/<folder>`, then unmount
+  (`sudo umount /mnt/share`). Online: `rclone check recovered/
+  <remote>:<folder>/recovered` must report no difference.
 
 ### 8. Wrap up
 

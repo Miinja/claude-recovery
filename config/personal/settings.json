@@ -29,7 +29,8 @@
       "Bash(cryptsetup luksFormat*)",
       "Bash(sudo cryptsetup luksFormat*)",
       "Bash(rm -rf /*)",
-      "Bash(sudo rm -rf /*)"
+      "Bash(sudo rm -rf /*)",
+      "Bash(*password=*)"
     ],
     "ask": [
       "Bash(testdisk*)",
@@ -71,7 +72,15 @@
       "Bash(chmod *)",
       "Bash(sudo chmod *)",
       "Bash(chown *)",
-      "Bash(sudo chown *)"
+      "Bash(sudo chown *)",
+      "Bash(ext4magic*)",
+      "Bash(sudo ext4magic*)",
+      "Bash(memtester*)",
+      "Bash(sudo memtester*)",
+      "Bash(smbclient*)",
+      "Bash(rclone*)",
+      "Bash(tsk_recover*)",
+      "Bash(sudo tsk_recover*)"
     ]
   },
   "hooks": {

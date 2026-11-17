@@ -69,7 +69,8 @@ This lock is one more safety, not a reason to relax the rules below.
 7. **Confirm before any irreversible action**, even on the image or the job folder
    (deletion, overwrite, in-place repair).
 8. **Nothing leaves.** No customer data is sent to the Internet, pasted into an online
-   service, or copied outside the job folder.
+   service, or copied outside the job folder. Only exception: handing files back to a
+   target the technician names (see "Handing files back over the network").
 9. **Never work around a refusal.** If a command is blocked by permissions, do not look
    for an equivalent: explain the need to the technician.
 
@@ -96,6 +97,16 @@ the disk:
 - **Dying** (noises, disconnections, SMART failure, unstable detection): warn the
   technician before going on. Every hour of operation counts; sending it to a lab may be
   the better choice.
+
+**The PC itself.** `sensors` shows the temperatures (CPU, NVMe disks); if it finds no
+sensor, run `sudo sensors-detect --auto`, then `sensors` again. Faulty memory corrupts
+copies without any error message. Suspect it if the PC crashes or reboots on its own, or
+if the fingerprint of the same file changes from one run to the next. Then the technician
+reboots the key and picks "Utilities" then "Memory Diagnostic Tool (memtest86+)" in the
+boot menu. A full pass takes one to several hours; if the PC refuses to start it, turn
+Secure Boot off for the test. From the session, `sudo memtester 1G 1` runs a quick test,
+but of part of the memory only. Do not clone on a PC whose memory is faulty: warn the
+technician, the copy will be made on another PC.
 
 ### 3. Clone
 
@@ -143,6 +154,26 @@ Files deleted on NTFS: `ntfsundelete <partition> --scan` lists them, then
 restores them with their names. Without `--truncate` they are rounded up to their block
 size and look corrupted.
 
+Deleted files with their names, on NTFS, FAT, exFAT or ext: The Sleuth Kit reads the
+image without changing it.
+
+```
+mmls image/image.img                                      # partitions, start in sectors
+fls -r -d -p -o <start> image/image.img                   # deleted files, with their path
+tsk_recover -o <start> image/image.img recovered/deleted/ # extracts them (-e: all files)
+icat -o <start> image/image.img <inode> > 'recovered/<name>'  # a single file
+```
+
+On ext4, deleted files lose their list of blocks: `ext4magic` rebuilds it from the
+journal, the better the more recent the deletion. It reads a partition, not a whole
+image:
+
+```
+sudo losetup -r -f --show -o $((<start> * 512)) image/image.img   # answers /dev/loopN
+sudo ext4magic /dev/loopN -r -d recovered/ext4magic/
+sudo losetup -d /dev/loopN
+```
+
 ### 6. Sort
 
 - Check the result: file count, volume, breakdown by type (`find … | file -f -`),
@@ -151,6 +182,37 @@ size and look corrupted.
 - After `photorec`: sort by type and date (`exiftool` for photos).
 - Run `clamscan -r --infected recovered/` before handing files back. Infected file:
   report it, do not delete it.
+- **Fingerprints**, once sorting is done, from the job folder:
+  `hashdeep -c sha256 -r -l recovered > hashes.txt`. To check a copy handed over to the
+  customer,
+  from the folder that holds its copy of `recovered`:
+  `hashdeep -c sha256 -r -l -a -k "$RECOVERY_JOB_DIR/hashes.txt" recovered`. It must
+  answer "Audit passed"; otherwise `-x` lists the files that differ. Write the
+  file count and the check result in the report.
+
+### Handing files back over the network (on request)
+
+Only if the technician asks for it and names the target: the customer's NAS or Windows
+share, or online storage belonging to the customer or the company. Never a personal or
+unknown account.
+
+- **Windows share or NAS.** The technician mounts the share in another console
+  (Ctrl+Alt+F2, back with Ctrl+Alt+F1), using the command you give. The password is
+  typed at the prompt, never in the command nor in the conversation:
+
+  ```
+  smbclient -L //<server> -U <account>          # lists the shares
+  sudo mkdir -p /mnt/share
+  sudo mount -t cifs //<server>/<share> /mnt/share -o username=<account>,uid=recovery,gid=recovery
+  ```
+
+  You then copy: `rsync -a --info=progress2 recovered /mnt/share/<folder>/`.
+- **Online storage** (OneDrive, Google Drive, Dropbox…). The technician runs
+  `rclone config` in the other console, since it means signing in to the account. You
+  then copy: `rclone copy recovered/ <remote>:<folder>/recovered --progress`.
+- Check the copy: `hashdeep` (above) from `/mnt/share/<folder>`, then unmount
+  (`sudo umount /mnt/share`). Online: `rclone check recovered/
+  <remote>:<folder>/recovered` must report no difference.
 
 ### 7. Close
 
@@ -255,6 +317,7 @@ At the end of the job, write `report.md`:
 - Source disk: model, serial number, capacity, interface
 - SMART state: healthy / degraded / dying (+ notable values)
 - Image: path, size, SHA-256, ddrescue read rate
+- Recovered files: count, `hashes.txt`, check of the copy handed over
 
 ## Diagnosis
 ## Actions taken

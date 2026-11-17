@@ -14,6 +14,8 @@ xfsprogs
 f2fs-tools
 hfsprogs
 dislocker
+sleuthkit
+ext4magic
 # Windows diagnosis (read-only): registry hives, BCD, event logs, firmware boot entries
 libhivex-bin
 python3-hivex
@@ -27,7 +29,10 @@ cryptsetup-initramfs
 gdisk
 parted
 fdisk
-# Hardware
+# Hardware: memory test (memtest86+ also gets a boot menu entry), temperatures
+memtest86+
+memtester
+lm-sensors
 lshw
 pciutils
 usbutils
@@ -38,6 +43,9 @@ jq
 fdupes
 libimage-exiftool-perl
 clamav
+# Fingerprints of the recovered files (proof that a copy is identical)
+hashdeep
+b3sum
 # VM for suspicious disks
 qemu-system-x86
 qemu-utils
@@ -47,6 +55,13 @@ firmware-linux
 firmware-iwlwifi
 firmware-realtek
 firmware-atheros
+firmware-brcm80211
+firmware-misc-nonfree
+firmware-amd-graphics
+# Handing files back over the network: Windows share or NAS, online storage
+cifs-utils
+smbclient
+rclone
 # Tools
 sudo
 git

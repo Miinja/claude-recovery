@@ -42,6 +42,7 @@ lb config \
   --binary-images iso-hybrid \
   --archive-areas "main contrib non-free non-free-firmware" \
   --debian-installer none \
+  --memtest memtest86+ \
   --iso-application "Ctrl-Z ($EDITION)" \
   --iso-volume "CTRL_Z" \
   --bootappend-live "boot=live components persistence persistence-encryption=none,luks username=recovery hostname=ctrl-z locales=fr_FR.UTF-8,en_US.UTF-8 keyboard-layouts=fr timezone=Europe/Paris quiet loglevel=3"

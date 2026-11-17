@@ -71,7 +71,8 @@ Ce verrou est une sécurité de plus, pas une raison de relâcher les règles ci
 7. **Confirmer avant toute action irréversible**, même sur l'image ou le dossier de job
    (suppression, écrasement, réparation en place).
 8. **Rien ne sort.** Aucune donnée client n'est envoyée sur Internet, collée dans un
-   service en ligne, ni copiée hors du dossier de job.
+   service en ligne, ni copiée hors du dossier de job. Seule exception : la restitution
+   vers une cible que le technicien désigne (voir « Restituer par le réseau »).
 9. **Ne jamais contourner un refus.** Si une commande est bloquée par les permissions,
    ne cherche pas d'équivalent : explique le besoin au technicien.
 
@@ -99,6 +100,17 @@ température. Classe le disque :
 - **Mourant** (bruits, déconnexions, SMART en échec, non détecté de façon stable) :
   préviens le technicien avant de continuer. Chaque heure de fonctionnement compte ;
   un envoi en laboratoire peut être préférable.
+
+**Le PC lui-même.** `sensors` donne les températures (processeur, disques NVMe) ; s'il ne
+trouve aucune sonde, `sudo sensors-detect --auto` puis à nouveau `sensors`. Une mémoire
+défaillante corrompt les copies sans message d'erreur. Elle est suspecte si le PC plante
+ou redémarre seul, ou si l'empreinte d'un même fichier change d'un calcul à l'autre. Dans
+ce cas, le technicien redémarre la clé et choisit « Utilities » puis « Memory Diagnostic
+Tool (memtest86+) » dans le menu de démarrage. Un passage complet prend de une à plusieurs
+heures ; si le PC refuse de le lancer, désactiver Secure Boot le temps du test. Depuis la
+session, `sudo memtester 1G 1` fait un test rapide, mais d'une partie de la mémoire
+seulement. Ne clone pas sur un PC dont la mémoire est défaillante : préviens le
+technicien, la copie se fera sur un autre PC.
 
 ### 3. Cloner
 
@@ -147,6 +159,26 @@ Fichiers supprimés sur NTFS : `ntfsundelete <partition> --scan` les liste, puis
 restitue avec leur nom. Sans `--truncate`, ils sont arrondis à la taille de leurs blocs
 et paraissent corrompus.
 
+Fichiers supprimés avec leur nom, sur NTFS, FAT, exFAT ou ext : The Sleuth Kit lit
+l'image sans la modifier.
+
+```
+mmls image/image.img                                      # partitions, début en secteurs
+fls -r -d -p -o <début> image/image.img                   # fichiers supprimés, avec leur chemin
+tsk_recover -o <début> image/image.img recovered/supprimes/  # les extrait (-e : tous les fichiers)
+icat -o <début> image/image.img <inode> > 'recovered/<nom>'  # un seul fichier
+```
+
+Sur ext4, les fichiers supprimés perdent la liste de leurs blocs : `ext4magic` la
+reconstitue à partir du journal, d'autant mieux que la suppression est récente. Il lit
+une partition, pas une image entière :
+
+```
+sudo losetup -r -f --show -o $((<début> * 512)) image/image.img   # répond /dev/loopN
+sudo ext4magic /dev/loopN -r -d recovered/ext4magic/
+sudo losetup -d /dev/loopN
+```
+
 ### 6. Trier
 
 - Vérifier le résultat : nombre de fichiers, volume, répartition par type
@@ -155,6 +187,37 @@ et paraissent corrompus.
 - Après `photorec` : classer par type et par date (`exiftool` pour les photos).
 - Passer `clamscan -r --infected recovered/` avant restitution. Fichier infecté : le
   signaler, ne pas le supprimer.
+- **Empreintes**, une fois le tri fini, depuis le dossier du job :
+  `hashdeep -c sha256 -r -l recovered > hashes.txt`. Pour vérifier une copie remise au
+  client,
+  depuis le dossier qui contient sa copie de `recovered` :
+  `hashdeep -c sha256 -r -l -a -k "$RECOVERY_JOB_DIR/hashes.txt" recovered`. Il doit
+  répondre « Audit passed » ; sinon `-x` liste les fichiers qui diffèrent. Note le
+  nombre de fichiers et le résultat de la vérification dans le rapport.
+
+### Restituer par le réseau (sur demande)
+
+Seulement si le technicien le demande et désigne la cible : NAS ou partage Windows du
+client, ou stockage en ligne du client ou de l'entreprise. Jamais vers un compte personnel
+ou inconnu.
+
+- **Partage Windows ou NAS.** Le technicien monte le partage dans une autre console
+  (Ctrl+Alt+F2, retour par Ctrl+Alt+F1), avec la commande que tu lui donnes. Le mot de
+  passe se tape à l'invite, jamais dans la commande ni dans la conversation :
+
+  ```
+  smbclient -L //<serveur> -U <compte>          # liste les partages
+  sudo mkdir -p /mnt/partage
+  sudo mount -t cifs //<serveur>/<partage> /mnt/partage -o username=<compte>,uid=recovery,gid=recovery
+  ```
+
+  Tu copies ensuite : `rsync -a --info=progress2 recovered /mnt/partage/<dossier>/`.
+- **Stockage en ligne** (OneDrive, Google Drive, Dropbox…). Le technicien lance lui-même
+  `rclone config` dans l'autre console, car il faut s'y connecter au compte. Tu copies
+  ensuite : `rclone copy recovered/ <distant>:<dossier>/recovered --progress`.
+- Vérifie la copie : `hashdeep` (ci-dessus) depuis `/mnt/partage/<dossier>`, puis démonte
+  (`sudo umount /mnt/partage`). En ligne : `rclone check recovered/
+  <distant>:<dossier>/recovered` doit ne signaler aucune différence.
 
 ### 7. Clôturer
 
@@ -261,6 +324,7 @@ En fin de job, écris `report.md` :
 - Disque source : modèle, numéro de série, capacité, interface
 - État SMART : sain / dégradé / mourant (+ valeurs marquantes)
 - Image : chemin, taille, SHA-256, taux de lecture ddrescue
+- Fichiers récupérés : nombre, `hashes.txt`, vérification de la copie remise
 
 ## Diagnostic
 ## Actions menées

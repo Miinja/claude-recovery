@@ -71,6 +71,8 @@ Ce verrou est une sécurité de plus, pas une raison de relâcher les règles ci
 7. **Demander avant toute action irréversible**, même sur la copie : explique ce qui
    sera modifié ou perdu, et attends un oui clair.
 8. **Rien ne sort.** N'envoie aucun fichier ni aucune information du disque sur Internet.
+   Seule exception : la copie vers un stockage de la personne (NAS, partage, compte en
+   ligne) qu'elle te demande d'utiliser (voir « Restituer par le réseau »).
 9. **Ne jamais contourner un refus.** Si une commande est bloquée, ne cherche pas
    d'équivalent : explique pourquoi elle l'est.
 
@@ -115,6 +117,17 @@ libre de la destination (`df -h "$RECOVERY_JOB_DIR"`).
 Résume l'état SMART en une phrase : sain, fatigué ou en fin de vie. S'il est en fin de
 vie, voir « Quand s'arrêter ». Si la personne veut continuer, clone sans attendre.
 
+**Le PC lui-même.** `sensors` donne les températures (processeur, disques NVMe) ; s'il ne
+trouve aucune sonde, `sudo sensors-detect --auto` puis à nouveau `sensors`. Une mémoire
+défaillante corrompt les copies sans message d'erreur. Elle est suspecte si le PC plante
+ou redémarre seul, ou si l'empreinte d'un même fichier change d'un calcul à l'autre. Dans
+ce cas, la personne redémarre la clé et choisit « Utilities » puis « Memory Diagnostic
+Tool (memtest86+) » dans le menu de démarrage. Un passage complet prend de une à plusieurs
+heures ; si le PC refuse de le lancer, désactiver Secure Boot le temps du test. Depuis la
+session, `sudo memtester 1G 1` fait un test rapide, mais d'une partie de la mémoire
+seulement. Ne clone pas sur un PC dont la mémoire est défaillante : dis-le, la copie devra
+se faire sur un autre PC.
+
 ### 4. Copier le disque (clonage)
 
 ```
@@ -155,6 +168,26 @@ Fichiers supprimés sur NTFS : `ntfsundelete <partition> --scan` les liste, puis
 restitue avec leur nom. Sans `--truncate`, ils sont arrondis à la taille de leurs blocs
 et paraissent corrompus.
 
+Fichiers supprimés avec leur nom, sur NTFS, FAT, exFAT ou ext : The Sleuth Kit lit
+l'image sans la modifier.
+
+```
+mmls image/image.img                                      # partitions, début en secteurs
+fls -r -d -p -o <début> image/image.img                   # fichiers supprimés, avec leur chemin
+tsk_recover -o <début> image/image.img recovered/supprimes/  # les extrait (-e : tous les fichiers)
+icat -o <début> image/image.img <inode> > 'recovered/<nom>'  # un seul fichier
+```
+
+Sur ext4, les fichiers supprimés perdent la liste de leurs blocs : `ext4magic` la
+reconstitue à partir du journal, d'autant mieux que la suppression est récente. Il lit
+une partition, pas une image entière :
+
+```
+sudo losetup -r -f --show -o $((<début> * 512)) image/image.img   # répond /dev/loopN
+sudo ext4magic /dev/loopN -r -d recovered/ext4magic/
+sudo losetup -d /dev/loopN
+```
+
 ### 7. Vérifier et ranger
 
 - Dis combien de fichiers et quel volume ont été récupérés, par type (photos, vidéos,
@@ -163,6 +196,36 @@ et paraissent corrompus.
 - Après `photorec`, classe par type et par date (`exiftool` pour les photos).
 - Passe `clamscan -r --infected recovered/` et signale tout fichier infecté sans le
   supprimer.
+- **Empreintes**, une fois le tri fini, depuis le dossier du job :
+  `hashdeep -c sha256 -r -l recovered > hashes.txt`. Pour vérifier une copie remise
+  (sauvegarde sur un autre disque), depuis le dossier qui contient sa copie de
+  `recovered` :
+  `hashdeep -c sha256 -r -l -a -k "$RECOVERY_JOB_DIR/hashes.txt" recovered`. Il doit
+  répondre « Audit passed » ; sinon `-x` liste les fichiers qui diffèrent. Explique
+  simplement que cela prouve que la sauvegarde est identique.
+
+### Restituer par le réseau (sur demande)
+
+Seulement si la personne le demande et désigne la cible : son NAS, un partage de son
+réseau, ou son propre compte de stockage en ligne.
+
+- **Partage Windows ou NAS.** La personne monte le partage dans une autre console
+  (Ctrl+Alt+F2, retour par Ctrl+Alt+F1), avec la commande que tu lui donnes. Le mot de
+  passe se tape à l'invite, jamais dans la commande ni dans la conversation :
+
+  ```
+  smbclient -L //<serveur> -U <compte>          # liste les partages
+  sudo mkdir -p /mnt/partage
+  sudo mount -t cifs //<serveur>/<partage> /mnt/partage -o username=<compte>,uid=recovery,gid=recovery
+  ```
+
+  Tu copies ensuite : `rsync -a --info=progress2 recovered /mnt/partage/<dossier>/`.
+- **Stockage en ligne** (OneDrive, Google Drive, Dropbox…). La personne lance elle-même
+  `rclone config` dans l'autre console, car il faut s'y connecter au compte. Tu copies
+  ensuite : `rclone copy recovered/ <distant>:<dossier>/recovered --progress`.
+- Vérifie la copie : `hashdeep` (ci-dessus) depuis `/mnt/partage/<dossier>`, puis démonte
+  (`sudo umount /mnt/partage`). En ligne : `rclone check recovered/
+  <distant>:<dossier>/recovered` doit ne signaler aucune différence.
 
 ### 8. Conclure
 
